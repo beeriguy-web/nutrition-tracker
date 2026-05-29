@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#16a34a">
+<title>מעקב תזונה</title>
+<script>
+const _manifest = {name:'מעקב תזונה',short_name:'תזונה',start_url:'./',display:'standalone',background_color:'#16a34a',theme_color:'#16a34a',dir:'rtl',lang:'he',
+icons:[{src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%2316a34a'/%3E%3Ctext x='96' y='135' font-size='110' text-anchor='middle'%3E%F0%9F%8D%BD%EF%B8%8F%3C/text%3E%3C/svg%3E",sizes:'192x192',type:'image/svg+xml'}]};
+document.addEventListener('DOMContentLoaded',()=>{const l=document.createElement('link');l.rel='manifest';l.href=URL.createObjectURL(new Blob([JSON.stringify(_manifest)],{type:'application/json'}));document.head.appendChild(l);});
+</script>
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='38' fill='%2316a34a'/%3E%3Ctext x='90' y='128' font-size='105' text-anchor='middle'%3E%F0%9F%8D%BD%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<style>
+:root{
+  --bg:#f4f6fa;--white:#fff;--border:#dde2ec;--border-light:#eef1f7;
+  --text:#1a1f36;--text-mid:#4a5568;--text-dim:#8896b3;
+  --accent:#16a34a;--accent-light:#f0fdf4;--accent-dark:#15803d;
+  --blue:#2563eb;--blue-light:#eff4ff;
+  --warn:#f59e0b;--warn-light:#fffbeb;
+  --danger:#ef4444;
+  --shadow:0 1px 4px rgba(26,31,54,.07);--radius:12px;
+  --safe-top:env(safe-area-inset-top,0px);--safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;direction:rtl;}
+
+.topbar{background:var(--white);border-bottom:1px solid var(--border);padding:0 16px;padding-top:var(--safe-top);position:sticky;top:0;z-index:50;box-shadow:var(--shadow);}
+.topbar-inner{display:flex;align-items:center;justify-content:space-between;height:56px;}
+.logo{font-size:16px;font-weight:800;color:var(--accent);}
+.logo span{color:var(--text-dim);font-weight:400;font-size:13px;}
+.topbar-right{display:flex;align-items:center;gap:8px;}
+.excel-btn{background:white;border:1px solid var(--border);border-radius:8px;height:34px;padding:0 12px;font-family:'Heebo',sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;color:var(--text-mid);}
+.excel-btn:hover{background:var(--accent-light);border-color:var(--accent);color:var(--accent);}
+
+.stats-bar{display:flex;gap:8px;padding:10px 16px;background:var(--white);border-bottom:1px solid var(--border-light);}
+.stat-chip{flex:1;background:var(--bg);border-radius:10px;padding:8px 10px;text-align:center;}
+.stat-chip .sv{font-size:20px;font-weight:800;color:var(--text);}
+.stat-chip .sl{font-size:10px;color:var(--text-dim);font-weight:600;margin-top:1px;}
+.stat-chip.green .sv{color:var(--accent);}
+.stat-chip.blue .sv{color:var(--blue);}
+.stat-chip.warn .sv{color:var(--warn);}
+
+.container{padding:14px 14px calc(80px + var(--safe-bottom));}
+
+/* VOICE CARD */
+.voice-card{background:linear-gradient(135deg,#14532d,#16a34a);border-radius:16px;padding:16px 18px;margin-bottom:12px;color:white;box-shadow:0 4px 16px rgba(22,163,74,.3);}
+.voice-top{display:flex;align-items:center;gap:14px;}
+.mic-btn{width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.2);border:2px solid rgba(255,255,255,.4);cursor:pointer;font-size:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:white;touch-action:manipulation;transition:transform .15s;}
+.mic-btn:active{transform:scale(.93);}
+.mic-btn.listening{background:#ef4444;border-color:#fca5a5;animation:pulse 1.4s ease-in-out infinite;}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.5);}50%{box-shadow:0 0 0 14px rgba(239,68,68,0);}}
+.voice-info{flex:1;}
+.voice-title{font-size:14px;font-weight:700;}
+.voice-hint{font-size:11px;opacity:.7;margin-top:2px;}
+.voice-st{font-size:12px;font-weight:600;margin-top:6px;opacity:.9;}
+.voice-transcript{background:rgba(255,255,255,.15);border-radius:10px;padding:8px 12px;font-size:13px;margin-top:8px;min-height:32px;line-height:1.5;display:none;}
+
+/* MEAL PICKER */
+.meal-picker{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
+.meal-pill{padding:6px 12px;border-radius:99px;border:1.5px solid var(--border);background:var(--white);font-family:'Heebo',sans-serif;font-size:12px;font-weight:700;color:var(--text-dim);cursor:pointer;transition:all .15s;touch-action:manipulation;}
+.meal-pill.active{background:var(--accent);color:white;border-color:var(--accent);}
+
+/* MANUAL INPUT */
+.search-cal-btn{background:var(--blue-light);border:1.5px solid var(--blue);border-radius:var(--radius);padding:0 14px;font-family:'Heebo',sans-serif;font-weight:700;font-size:13px;color:var(--blue);cursor:pointer;white-space:nowrap;height:46px;flex-shrink:0;}
+.search-cal-btn:hover{background:#dbeafe;}
+.unknown-banner{background:var(--warn-light);border:1px solid #fde68a;border-radius:10px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:#92400e;display:none;align-items:center;justify-content:space-between;gap:8px;}
+.unknown-banner.show{display:flex;}
+.manual-row{display:flex;gap:8px;margin-bottom:12px;}
+.manual-row input{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:11px 14px;font-family:'Heebo',sans-serif;font-size:14px;color:var(--text);direction:rtl;}
+.manual-row input:focus{outline:none;border-color:var(--accent);}
+.input-food{flex:1;}
+.input-cal{width:80px;}
+.btn-add{background:var(--accent);color:white;border:none;border-radius:var(--radius);padding:0 16px;font-family:'Heebo',sans-serif;font-weight:700;font-size:14px;cursor:pointer;white-space:nowrap;height:46px;flex-shrink:0;}
+
+/* SUGGESTION CARD */
+.suggestion-card{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:12px;border-right:4px solid var(--warn);display:none;}
+.suggestion-card.show{display:block;}
+.sug-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+.sug-title{font-size:13px;font-weight:700;color:var(--warn);}
+.sug-close{background:none;border:none;cursor:pointer;font-size:16px;color:var(--text-dim);}
+.sug-source{font-size:10px;color:var(--text-dim);margin-bottom:10px;}
+.sug-item{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-light);}
+.sug-item:last-child{border-bottom:none;}
+.sug-name{font-size:13px;font-weight:600;}
+.sug-portion{font-size:11px;color:var(--text-dim);margin-top:1px;}
+.sug-right{text-align:left;display:flex;flex-direction:column;align-items:flex-end;gap:3px;}
+.sug-cal{font-size:14px;font-weight:800;color:var(--accent);}
+.sug-save{font-size:10px;color:var(--accent);background:var(--accent-light);border-radius:99px;padding:2px 8px;font-weight:700;}
+
+/* FILTER TABS */
+.filter-tabs{display:flex;background:var(--white);border:1px solid var(--border);border-radius:12px;padding:4px;margin-bottom:12px;gap:4px;}
+.ftab{flex:1;padding:9px 6px;border-radius:9px;border:none;background:transparent;font-family:'Heebo',sans-serif;font-size:13px;font-weight:700;color:var(--text-dim);cursor:pointer;transition:all .15s;touch-action:manipulation;}
+.ftab.active{background:var(--accent);color:white;box-shadow:0 2px 8px rgba(22,163,74,.3);}
+
+/* DAY HEADER */
+.day-header{display:flex;align-items:center;justify-content:space-between;padding:10px 4px 6px;}
+.day-label{font-size:13px;font-weight:700;color:var(--text-mid);}
+.day-total-badge{font-size:12px;font-weight:700;color:var(--accent);background:var(--accent-light);border-radius:99px;padding:3px 12px;}
+
+/* ENTRY CARD */
+.entry-card{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:8px;box-shadow:var(--shadow);display:flex;align-items:center;gap:12px;}
+.entry-card.drink{border-right:4px solid var(--blue);}
+.entry-icon{font-size:22px;flex-shrink:0;}
+.entry-body{flex:1;}
+.entry-name{font-size:15px;font-weight:700;line-height:1.3;}
+.entry-meta{font-size:11px;color:var(--text-dim);margin-top:2px;}
+.entry-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;}
+.entry-cal{font-size:20px;font-weight:800;color:var(--accent);}
+.entry-cal-unit{font-size:10px;color:var(--text-dim);font-weight:400;}
+.entry-cal.drink-cal{color:var(--blue);}
+.meal-tag{display:inline-block;border-radius:99px;padding:2px 8px;font-size:10px;font-weight:700;}
+.meal-tag.breakfast{background:#fef3c7;color:#d97706;}
+.meal-tag.lunch{background:#dbeafe;color:#1d4ed8;}
+.meal-tag.dinner{background:#ede9fe;color:#7c3aed;}
+.meal-tag.snack{background:#fce7f3;color:#9d174d;}
+.meal-tag.drink{background:var(--blue-light);color:var(--blue);}
+.del-btn{width:28px;height:28px;border-radius:8px;border:1px solid var(--border);background:transparent;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;color:var(--text-dim);flex-shrink:0;}
+.del-btn:hover{background:#fff1f2;border-color:#fecdd3;color:var(--danger);}
+
+.empty{text-align:center;padding:48px 20px;color:var(--text-dim);}
+.empty-icon{font-size:44px;margin-bottom:12px;}
+.empty-title{font-size:16px;font-weight:700;color:var(--text-mid);margin-bottom:6px;}
+
+.toast{position:fixed;bottom:calc(90px + var(--safe-bottom));left:50%;transform:translateX(-50%) translateY(30px);background:#1e293b;color:white;padding:11px 18px;border-radius:100px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:all .3s;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.25);}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="logo">🥗 מעקב תזונה <span>יומי</span></div>
+    <div class="topbar-right">
+      <button class="excel-btn" onclick="doExport()">📊 ייצא Excel</button>
+    </div>
+  </div>
+</div>
+
+<div class="stats-bar">
+  <div class="stat-chip green"><div class="sv" id="st-cal">0</div><div class="sl">קק"ל היום</div></div>
+  <div class="stat-chip blue"><div class="sv" id="st-entries">0</div><div class="sl">רשומות</div></div>
+  <div class="stat-chip warn"><div class="sv" id="st-days">0</div><div class="sl">ימי מעקב</div></div>
+</div>
+
+<div class="container">
+
+  <!-- VOICE -->
+  <div class="voice-card">
+    <div class="voice-top">
+      <button class="mic-btn" id="micBtn" onclick="toggleListen()">🎤</button>
+      <div class="voice-info">
+        <div class="voice-title">הקלטה קולית</div>
+        <div class="voice-hint">אמור מה אכלת או שתית — יחושב אוטומטית</div>
+        <div class="voice-st" id="voiceSt">לחץ על המיקרופון להתחלה</div>
+      </div>
+    </div>
+    <div class="voice-transcript" id="voiceTranscript"></div>
+  </div>
+
+  <!-- SUGGESTION -->
+  <div class="suggestion-card" id="suggestionCard">
+    <div class="sug-header">
+      <div class="sug-title">💡 חלופות בריאות יותר</div>
+      <button class="sug-close" onclick="closeSuggestion()">✕</button>
+    </div>
+    <div class="sug-source">מבוסס על המלצות משרד הבריאות הישראלי ומומחי תזונה</div>
+    <div id="sugItems"></div>
+  </div>
+
+  <!-- MEAL TYPE -->
+  <div class="meal-picker" id="mealPicker">
+    <button class="meal-pill active" data-meal="breakfast" onclick="pickMeal(this)">🌅 בוקר</button>
+    <button class="meal-pill" data-meal="lunch" onclick="pickMeal(this)">☀️ צהריים</button>
+    <button class="meal-pill" data-meal="dinner" onclick="pickMeal(this)">🌙 ערב</button>
+    <button class="meal-pill" data-meal="snack" onclick="pickMeal(this)">🍎 חטיף</button>
+    <button class="meal-pill" data-meal="drink" onclick="pickMeal(this)">💧 שתייה</button>
+  </div>
+
+  <!-- UNKNOWN FOOD BANNER -->
+  <div class="unknown-banner" id="unknownBanner">
+    <span id="unknownText">המזון לא נמצא בבסיס הנתונים — הוסף קלוריות ידנית:</span>
+    <button class="search-cal-btn" id="searchCalBtn" onclick="searchCalories()">🔍 חפש קלוריות</button>
+  </div>
+
+  <!-- MANUAL INPUT -->
+  <div class="manual-row">
+    <input type="text" class="input-food" id="inputFood" placeholder="מה אכלת / שתית?" onkeydown="if(event.key==='Enter')addEntry()">
+    <input type="number" class="input-cal" id="inputCal" placeholder="קק״ל" min="0" onkeydown="if(event.key==='Enter')addEntry()">
+    <button class="btn-add" onclick="addEntry()">➕ הוסף</button>
+  </div>
+
+  <!-- FILTER -->
+  <div class="filter-tabs">
+    <button class="ftab active" id="fb-today" onclick="setFilter('today')">📋 היום</button>
+    <button class="ftab" id="fb-all" onclick="setFilter('all')">📅 כל הימים</button>
+  </div>
+
+  <!-- LIST -->
+  <div id="entriesList"></div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════
+// FOOD DATABASE  (Israeli nutrition data)
+// format: { keywords, name, cal, portion, alts:[{name,cal,portion,note}] }
+// ═══════════════════════════════════════════
+const FOOD_DB = [
+  // EGGS & DAIRY
+  {kw:['ביצה','ביצים','ביצה מקושקשת','ביצה מטוגנת','ביצה קשה','שקשוקה'],name:'ביצה',cal:75,portion:'ביצה אחת (55ג׳)',
+   alts:[{name:'חביתה לבנות ביצה בלבד',cal:35,portion:'לבן של 2 ביצים',note:'חצי הקלוריות, אותה חלבון'},
+         {name:'גבינה קוטג׳ 5%',cal:55,portion:'100 גרם',note:'מעייפת פחות, עשירה בחלבון'}]},
+  {kw:['חביתה'],name:'חביתה',cal:185,portion:'2 ביצים + שמן',
+   alts:[{name:'חביתת לבנות + ירקות',cal:80,portion:'3 לבנות ביצה + פלפל עגבנייה',note:'פחות שומן, יותר נפח'},
+         {name:'קוטג׳ עם ירקות',cal:90,portion:'150 גרם + ירקות',note:'קר ומהיר, עשיר בחלבון'}]},
+  {kw:['גבינה לבנה','גבינה','גבינה 5%','גבינה 9%'],name:'גבינה לבנה',cal:100,portion:'100 גרם (5%)',
+   alts:[{name:'קוטג׳ 1%',cal:55,portion:'100 גרם',note:'כמעט חצי קלוריות'},
+         {name:'לאבנה 5%',cal:80,portion:'2 כפות',note:'דנסי יותר, מספק לזמן ארוך'}]},
+  {kw:['קוטג׳'],name:'קוטג׳',cal:55,portion:'100 גרם',
+   alts:[{name:'קוטג׳ 0%',cal:45,portion:'100 גרם',note:'מינוס 10 קלוריות ל-100 גרם'},
+         {name:'יוגורט יווני 0%',cal:60,portion:'100 גרם',note:'טעים יותר, אותם ערכים'}]},
+  {kw:['יוגורט','יוגורט יווני'],name:'יוגורט',cal:60,portion:'100 גרם (1.5%)',
+   alts:[{name:'יוגורט יווני 0%',cal:55,portion:'100 גרם',note:'יותר חלבון, פחות שומן'},
+         {name:'קוטג׳ 1%',cal:55,portion:'100 גרם',note:'מספיק, מילוי דומה'}]},
+  {kw:['שמנת','שמנת חמוצה'],name:'שמנת חמוצה',cal:160,portion:'100 גרם (15%)',
+   alts:[{name:'יוגורט יווני 0%',cal:55,portion:'100 גרם',note:'שליש הקלוריות, יותר חלבון'},
+         {name:'לאבנה 5%',cal:80,portion:'2 כפות',note:'טעם קרמי, הרבה פחות שומן'}]},
+
+  // BREAD & GRAINS
+  {kw:['לחם','פרוסת לחם','לחם אחיד'],name:'לחם לבן',cal:80,portion:'פרוסה אחת',
+   alts:[{name:'לחם שיפון מלא',cal:65,portion:'פרוסה אחת',note:'יותר סיבים, שובע ארוך יותר'},
+         {name:'קרקר שיפון',cal:35,portion:'2 קרקרים',note:'פחות פחמימות, קריספי'}]},
+  {kw:['לחם מלא','לחם שיפון'],name:'לחם מלא',cal:65,portion:'פרוסה אחת',
+   alts:[{name:'קרקר שיפון',cal:35,portion:'2 קרקרים',note:'אותה הנאה, כמעט חצי קלוריות'},
+         {name:'עלה חסה כרוטב',cal:5,portion:'עלה גדול',note:'מינימום קלוריות, עוטפים את המלית'}]},
+  {kw:['פיתה'],name:'פיתה',cal:270,portion:'פיתה שלמה (90ג׳)',
+   alts:[{name:'פיתה דיאט קטנה',cal:130,portion:'פיתה קטנה (50ג׳)',note:'חצי הגודל, חצי הקלוריות'},
+         {name:'לחם שיפון x2',cal:130,portion:'2 פרוסות',note:'פחות מחצי הקלוריות, יותר שובע'}]},
+  {kw:['לחמנייה','לחמניה','בגט'],name:'לחמנייה',cal:160,portion:'לחמנייה אחת',
+   alts:[{name:'פיתה דיאט',cal:130,portion:'פיתה קטנה',note:'30 קלוריות פחות'},
+         {name:'2 פרוסות לחם מלא',cal:130,portion:'2 פרוסות',note:'יותר סיבים, שובע ארוך יותר'}]},
+  {kw:['שיבולת שועל','דייסה','גרנולה'],name:'שיבולת שועל',cal:320,portion:'קערה (80ג׳ יבש + חלב)',
+   alts:[{name:'שיבולת שועל בחלב דל שומן',cal:260,portion:'קערה (60ג׳)',note:'פחות כמות, אותה הנאה'},
+         {name:'יוגורט יווני + פירות',cal:180,portion:'150ג׳ יוגורט + חצי בננה',note:'פחות פחמימות, יותר חלבון'}]},
+  {kw:['אורז','אורז לבן','אורז מבושל'],name:'אורז לבן',cal:260,portion:'כוס מבושל (180ג׳)',
+   alts:[{name:'אורז מלא',cal:230,portion:'כוס מבושל (180ג׳)',note:'יותר סיבים, שובע ארוך יותר'},
+         {name:'כרובית אורז',cal:50,portion:'כוס (180ג׳)',note:'80% פחות קלוריות, טעים בהפתעה'}]},
+  {kw:['פסטה','ספגטי','מקרוני'],name:'פסטה',cal:380,portion:'צלחת (200ג׳ מבושל)',
+   alts:[{name:'פסטה מלאה',cal:340,portion:'צלחת (200ג׳)',note:'יותר סיבים, שובע ארוך יותר'},
+         {name:'ספירלי קישוא (זודלס)',cal:50,portion:'צלחת',note:'כמעט ללא קלוריות, תחליף נהדר'}]},
+  {kw:['קינואה'],name:'קינואה',cal:220,portion:'כוס מבושל (185ג׳)',
+   alts:[{name:'קינואה אדומה + ירקות',cal:180,portion:'כוס + ירקות',note:'יותר נפח, פחות קלוריות'},
+         {name:'כוסמת מבושלת',cal:200,portion:'כוס',note:'ערך תזונתי דומה, מחיר נמוך יותר'}]},
+
+  // PROTEINS
+  {kw:['שניצל','שניצל עוף'],name:'שניצל עוף',cal:280,portion:'שניצל בינוני (120ג׳)',
+   alts:[{name:'חזה עוף בגריל',cal:165,portion:'120 גרם',note:'40% פחות קלוריות, יותר חלבון טהור'},
+         {name:'שניצל בצנצנת (אפוי)',cal:210,portion:'120 גרם',note:'ללא טיגון, פחות שומן'}]},
+  {kw:['חזה עוף','עוף','עוף צלוי','עוף מבושל'],name:'חזה עוף',cal:165,portion:'100 גרם',
+   alts:[{name:'חזה הודו',cal:135,portion:'100 גרם',note:'פחות שומן, יותר חלבון'},
+         {name:'טונה במים',cal:100,portion:'קופסא (100ג׳)',note:'מהיר, זול, מצוין לחלבון'}]},
+  {kw:['סטייק','בשר','סינטה','פילה'],name:'סטייק',cal:280,portion:'100 גרם',
+   alts:[{name:'חזה עוף בגריל',cal:165,portion:'100 גרם',note:'40% פחות קלוריות, פחות שומן רווי'},
+         {name:'חזה הודו',cal:135,portion:'100 גרם',note:'הכי רזה מהאפשרויות, טעים בגריל'}]},
+  {kw:['המבורגר','בורגר'],name:'המבורגר',cal:450,portion:'בורגר עם לחמנייה',
+   alts:[{name:'בורגר הודו עם לחמנייה קטנה',cal:320,portion:'120ג׳ הודו + לחמנייה',note:'30% פחות קלוריות'},
+         {name:'בורגר ירקות אפוי',cal:250,portion:'פטייה ירקות + פיתה קטנה',note:'45% פחות קלוריות'}]},
+  {kw:['טונה','טונה בשמן','טונה במים'],name:'טונה',cal:116,portion:'קופסא 100ג׳ במים',
+   alts:[{name:'טונה + ירקות (ללא לחם)',cal:120,portion:'קופסא + ירקות',note:'מלא יותר ללא תוספת פחמימות'},
+         {name:'סרדינים במים',cal:90,portion:'100 גרם',note:'עשיר יותר באומגה-3, קלוריות נמוכות'}]},
+  {kw:['דג','סלמון','דג מוש','דג מושט'],name:'סלמון',cal:208,portion:'100 גרם',
+   alts:[{name:'בורי / דניס בגריל',cal:130,portion:'100 גרם',note:'הרבה פחות שומן, אותו חלבון'},
+         {name:'טונה במים',cal:100,portion:'100 גרם',note:'נוח יותר, פחות קלוריות'}]},
+  {kw:['ביצת עין','עין שמש'],name:'ביצת עין',cal:120,portion:'ביצה אחת + שמן',
+   alts:[{name:'ביצה קשה',cal:75,portion:'ביצה אחת',note:'ללא שמן, שליש פחות קלוריות'},
+         {name:'חביתה לבנות ביצה',cal:35,portion:'2 לבנות',note:'הכי רזה, אותו נפח'}]},
+  {kw:['חומוס'],name:'חומוס',cal:265,portion:'מנה (150ג׳, ללא פיתה)',
+   alts:[{name:'חומוס + ירקות ללא פיתה',cal:200,portion:'150ג׳ חומוס + ירקות',note:'חיסכון של 100 קלוריות'},
+         {name:'חומוס ביתי דל שומן',cal:220,portion:'150ג׳',note:'פחות טחינה, יותר שום ולימון'}]},
+
+  // SALADS & VEGETABLES
+  {kw:['סלט','סלט ירוק','סלט ירקות'],name:'סלט ירקות',cal:80,portion:'קערה (200ג׳) עם שמן',
+   alts:[{name:'סלט ירקות בלי שמן',cal:40,portion:'קערה גדולה (200ג׳)',note:'חצי הקלוריות, כל הוויטמינים'},
+         {name:'סלט ירקות עם לימון בלבד',cal:35,portion:'קערה גדולה',note:'מינוס 45 קלוריות מהשמן'}]},
+  {kw:['אבוקדו'],name:'אבוקדו',cal:160,portion:'חצי אבוקדו',
+   alts:[{name:'רבע אבוקדו',cal:80,portion:'רבע',note:'אותה הנאה, חצי הקלוריות'},
+         {name:'גבינה לבנה 5%',cal:100,portion:'100 גרם',note:'שומן בריא, פחות קלוריות'}]},
+  {kw:['גזר','מלפפון','עגבנייה','סלרי'],name:'ירקות',cal:30,portion:'קערה (150ג׳)',
+   alts:[{name:'ירקות עם לאבנה',cal:110,portion:'קערה + 2 כפות לאבנה',note:'מוסיף חלבון לנשנוש'},
+         {name:'ירקות ממולחים',cal:25,portion:'קערה',note:'פחות קלוריות, יותר טעם'}]},
+
+  // SNACKS
+  {kw:['בננה'],name:'בננה',cal:90,portion:'בננה בינונית',
+   alts:[{name:'תפוח עץ',cal:55,portion:'תפוח בינוני',note:'35 קלוריות פחות, יותר סיבים'},
+         {name:'אגס',cal:60,portion:'אגס בינוני',note:'מתוק, פחות סוכר מבננה'}]},
+  {kw:['תפוח','תפוח עץ'],name:'תפוח',cal:55,portion:'תפוח בינוני',
+   alts:[{name:'תפוח ללא קליפה',cal:50,portion:'תפוח בינוני',note:'כמעט זהה, אך עם הקליפה יש יותר סיבים'},
+         {name:'אשכולית',cal:40,portion:'חצי אשכולית',note:'פחות קלוריות, מעולה לשובע'}]},
+  {kw:['ענבים'],name:'ענבים',cal:70,portion:'כוס (100ג׳)',
+   alts:[{name:'תות שדה',cal:33,portion:'כוס (100ג׳)',note:'חצי הקלוריות, עשיר בויטמין C'},
+         {name:'מלון',cal:35,portion:'פרוסה גדולה (150ג׳)',note:'מרענן, נמוך קלוריות'}]},
+  {kw:['שוקולד','שוקולד חלב','שוקולד מריר'],name:'שוקולד',cal:160,portion:'3 קוביות (30ג׳)',
+   alts:[{name:'שוקולד מריר 85%',cal:140,portion:'3 קוביות',note:'פחות סוכר, יותר אנטיאוקסידנטים'},
+         {name:'2 תמרים',cal:110,portion:'2 יחידות',note:'טבעי, מתוק, פחות קלוריות ריקות'}]},
+  {kw:['עוגיות','ביסקוויט','אוריאו'],name:'עוגיות',cal:180,portion:'3 עוגיות',
+   alts:[{name:'אורז פריך x2',cal:70,portion:'2 דיסקיות',note:'פחות מחצי הקלוריות, פריך'},
+         {name:'תמרים x2',cal:110,portion:'2 תמרים',note:'מתוק טבעי, סיבים ואנרגייה'}]},
+  {kw:['אגוזים','שקדים','גרעינים','קשיו'],name:'אגוזים',cal:180,portion:'קומץ (30ג׳)',
+   alts:[{name:'10 שקדים בלבד',cal:70,portion:'10 שקדים',note:'אותה הנאה, פחות כמות'},
+         {name:'אדממה (פולי סויה)',cal:90,portion:'חצי כוס',note:'יותר חלבון, פחות שומן'}]},
+  {kw:['חטיף','בייגלה','ביסלי','במבה','קרקר'],name:'חטיף מלוח',cal:200,portion:'שקית קטנה (40ג׳)',
+   alts:[{name:'פופקורן ביתי',cal:90,portion:'כוס גדולה (30ג׳)',note:'נפח כפול, פחות מחצי הקלוריות'},
+         {name:'אורז פריך x3',cal:105,portion:'3 דיסקיות',note:'פחות מחצי, מרווה'}]},
+  {kw:['חלבה','חלווה'],name:'חלבה',cal:160,portion:'פרוסה דקה (30ג׳)',
+   alts:[{name:'2 כפות טחינה גולמית',cal:120,portion:'30 גרם',note:'יותר חלבון, פחות סוכר'},
+         {name:'שוקולד מריר 85%',cal:140,portion:'3 קוביות',note:'פחות קלוריות, יותר ממכר לטוב'}]},
+
+  // HOT MEALS
+  {kw:['פיצה','פיצה'],name:'פיצה',cal:280,portion:'פרוסה אחת',
+   alts:[{name:'פיצה כרובית ביתית',cal:120,portion:'פרוסה',note:'60% פחות קלוריות, סיבים'},
+         {name:'לחם שטוח + עגבנייה + גבינה',cal:160,portion:'מנה',note:'40% פחות, מהיר להכנה'}]},
+  {kw:['קציצות','קציצה','קציצות עוף','קציצות הודו'],name:'קציצות',cal:200,portion:'3 קציצות (150ג׳)',
+   alts:[{name:'קציצות הודו אפויות',cal:150,portion:'3 קציצות',note:'25% פחות שומן'},
+         {name:'קציצות ירקות + קטניות',cal:120,portion:'3 קציצות',note:'40% פחות קלוריות, יותר סיבים'}]},
+  {kw:['מרק','מרק עוף','מרק ירקות'],name:'מרק',cal:80,portion:'קערה (300 מ"ל)',
+   alts:[{name:'מרק ירקות ביתי',cal:50,portion:'קערה',note:'ללא שמן, מצוין לשובע'},
+         {name:'מרק מיסו',cal:30,portion:'ספל',note:'מינימום קלוריות, פרוביוטיקה'}]},
+  {kw:['תבשיל','נזיד','קדרה'],name:'תבשיל',cal:350,portion:'מנה רגילה (300ג׳)',
+   alts:[{name:'תבשיל עוף + ירקות ללא תפו"א',cal:250,portion:'300 גרם',note:'פחות פחמימות'},
+         {name:'מרק קטניות',cal:200,portion:'קערה',note:'מלא, בריא, פחות קלוריות'}]},
+
+  // BREAKFAST SPECIALS
+  {kw:['גרנולה'],name:'גרנולה',cal:380,portion:'קערה עם חלב (80ג׳)',
+   alts:[{name:'שיבולת שועל לא קלויה',cal:280,portion:'קערה (60ג׳ + חלב)',note:'100 קלוריות פחות, יותר סיבים'},
+         {name:'יוגורט יווני + פירות',cal:180,portion:'150ג׳ + בננה',note:'הרבה פחות קלוריות, יותר חלבון'}]},
+  {kw:['פנקייק','פנקייקס'],name:'פנקייק',cal:320,portion:'3 פנקייקים',
+   alts:[{name:'פנקייק בננה (ביצה + בננה)',cal:160,portion:'3 פנקייקים',note:'חצי הקלוריות, ללא קמח'},
+         {name:'פנקייק שיבולת שועל',cal:240,portion:'3 פנקייקים',note:'יותר סיבים, פחות סוכר'}]},
+  {kw:['טוסט','סנדוויץ','כריך'],name:'כריך',cal:320,portion:'כריך עם ממרח',
+   alts:[{name:'כריך לחם מלא + גבינה 5%',cal:220,portion:'2 פרוסות + גבינה',note:'100 קלוריות פחות'},
+         {name:'כריך עם אבוקדו + עגבנייה',cal:240,portion:'2 פרוסות + אבוקדו',note:'שומן בריא, שובע ארוך'}]},
+
+  // DRINKS
+  {kw:['קפה','קפה שחור','אספרסו'],name:'קפה שחור',cal:5,portion:'כוס',
+   alts:[{name:'קפה שחור ללא סוכר',cal:5,portion:'כוס',note:'זהה — אל תוסיף סוכר!'},
+         {name:'תה ירוק',cal:2,portion:'כוס',note:'פחות קפאין, עשיר בנוגדי חמצון'}]},
+  {kw:['קפה הפוך','הפוך','קפה הפוך עם חלב'],name:'קפה הפוך',cal:100,portion:'כוס קטנה (חלב 2%)',
+   alts:[{name:'קפה הפוך עם חלב 1%',cal:72,portion:'כוס קטנה',note:'28 קלוריות פחות'},
+         {name:'קפה הפוך עם חלב שיבולת שועל',cal:90,portion:'כוס קטנה',note:'פחות שומן רווי'}]},
+  {kw:['קפה הפוך עם חלב שיבולת שועל','הפוך שיבולת שועל','הפוך אוטמילק'],name:'קפה הפוך עם חלב שיבולת שועל',cal:90,portion:'כוס קטנה',
+   alts:[{name:'קפה הפוך עם חלב 1%',cal:72,portion:'כוס קטנה',note:'18 קלוריות פחות'},
+         {name:'קפה שחור',cal:5,portion:'כוס',note:'אפס קלוריות — שנה הרגל בהדרגה'}]},
+  {kw:['חלב שיבולת שועל','אוט מילק','אוטמילק'],name:'חלב שיבולת שועל',cal:45,portion:'100 מ"ל',
+   alts:[{name:'חלב דל שומן 1%',cal:37,portion:'100 מ"ל',note:'פחות קלוריות, יותר חלבון'},
+         {name:'חלב סויה לא ממותק',cal:33,portion:'100 מ"ל',note:'הכי קליל מהחלבות הצמחיים'}]},
+  {kw:['קפה עם חלב','לאטה','קפוצ\'ינו','קפוצינו'],name:'קפה עם חלב',cal:120,portion:'כוס גדולה',
+   alts:[{name:'קפה עם חלב דל שומן',cal:80,portion:'כוס גדולה',note:'40 קלוריות פחות'},
+         {name:'קפה שחור',cal:5,portion:'כוס',note:'אפס קלוריות, שנה הרגל בהדרגה'}]},
+  {kw:['מיץ','מיץ תפוזים','מיץ תפוח'],name:'מיץ פרי',cal:110,portion:'כוס (250 מ"ל)',
+   alts:[{name:'פרי שלם',cal:60,portion:'תפוז / תפוח שלם',note:'יותר סיבים, שובע ארוך יותר'},
+         {name:'מים עם לימון',cal:5,portion:'כוס',note:'ריענון ללא קלוריות'}]},
+  {kw:['קולה','שתייה מוגזת','סודה','ספרייט','פאנטה'],name:'שתייה מוגזת',cal:150,portion:'פחית (330 מ"ל)',
+   alts:[{name:'קולה זירו',cal:0,portion:'פחית',note:'אפס קלוריות, אפשרות ביניים'},
+         {name:'מים מוגזים עם לימון',cal:5,portion:'כוס גדולה',note:'ריענון אמיתי ללא סוכר'}]},
+  {kw:['בירה'],name:'בירה',cal:150,portion:'בקבוק 330 מ"ל',
+   alts:[{name:'בירה קלה',cal:100,portion:'330 מ"ל',note:'30% פחות קלוריות'},
+         {name:'יין אדום',cal:120,portion:'כוס 150 מ"ל',note:'פחות קלוריות, נוגדי חמצון'}]},
+  {kw:['מים'],name:'מים',cal:0,portion:'כוס',
+   alts:[]},
+  {kw:['שייק','שייק בננה','שייק פרות'],name:'שייק פירות',cal:280,portion:'כוס (300 מ"ל)',
+   alts:[{name:'שייק ירוק (תרד + פרי)',cal:160,portion:'300 מ"ל',note:'יותר ויטמינים, פחות סוכר'},
+         {name:'שייק חלבון',cal:180,portion:'300 מ"ל',note:'יותר חלבון, פחות פחמימות'}]},
+
+  // SWEETS & PASTRY
+  {kw:['עוגה','עוגת שוקולד','עוגת גבינה'],name:'עוגה',cal:380,portion:'פרוסה בינונית',
+   alts:[{name:'עוגת שוקולד ביצה בלבד',cal:180,portion:'פרוסה',note:'ללא קמח וסוכר לבן'},
+         {name:'שוקולד מריר 85% x4 קוביות',cal:190,portion:'30 גרם',note:'מתוק, מספק, הרבה פחות'}]},
+  {kw:['קרואסון','מאפה','בורקס'],name:'קרואסון / בורקס',cal:320,portion:'יחידה אחת',
+   alts:[{name:'לחם שיפון + ממרח',cal:150,portion:'2 פרוסות + ממרח',note:'חצי הקלוריות, יותר שובע'},
+         {name:'עוגת גבינה קלה',cal:200,portion:'פרוסה',note:'35% פחות קלוריות'}]},
+  {kw:['גלידה'],name:'גלידה',cal:200,portion:'גביע בינוני (100ג׳)',
+   alts:[{name:'יוגורט קפוא',cal:90,portion:'100 גרם',note:'55% פחות קלוריות, קרמי'},
+         {name:'שייק פרות קפוא',cal:70,portion:'בר 80ג׳',note:'טבעי, מרענן, מינימום קלוריות'}]},
+
+  // FRUITS
+  {kw:['אבטיח'],name:'אבטיח',cal:30,portion:'100 גרם',
+   alts:[{name:'מלון',cal:35,portion:'100 גרם',note:'דומה בקלוריות, מרווה יותר'},
+         {name:'תות שדה',cal:33,portion:'100 גרם',note:'עשיר בויטמין C, אינדקס גליקמי נמוך יותר'}]},
+  {kw:['מלון'],name:'מלון',cal:35,portion:'100 גרם',
+   alts:[{name:'אבטיח',cal:30,portion:'100 גרם',note:'פחות קלוריות, יותר מים'},
+         {name:'תות שדה',cal:33,portion:'100 גרם',note:'אינדקס גליקמי נמוך יותר'}]},
+  {kw:['תות','תות שדה'],name:'תות שדה',cal:33,portion:'100 גרם',
+   alts:[{name:'פטל',cal:52,portion:'100 גרם',note:'יותר סיבים ואנטיאוקסידנטים'},
+         {name:'אוכמניות',cal:57,portion:'100 גרם',note:'עשיר בנוגדי חמצון'}]},
+  {kw:['אפרסק','נקטרינה'],name:'אפרסק',cal:39,portion:'פרי בינוני (130ג׳)',
+   alts:[{name:'תות שדה',cal:43,portion:'כוס (130ג׳)',note:'פחות סוכר, יותר ויטמין C'},
+         {name:'אגס',cal:78,portion:'אגס בינוני',note:'יותר סיבים, שובע ארוך יותר'}]},
+  {kw:['שזיף'],name:'שזיף',cal:30,portion:'שזיף בינוני',
+   alts:[{name:'תמר יבש',cal:55,portion:'תמר אחד',note:'יותר קלוריות אבל גם יותר סיבים'},
+         {name:'אפרסק',cal:39,portion:'פרי בינוני',note:'טריות ומיץ, פחות סוכר'}]},
+  {kw:['מנגו'],name:'מנגו',cal:60,portion:'100 גרם',
+   alts:[{name:'אבטיח',cal:30,portion:'200 גרם',note:'חצי הקלוריות, נפח כפול'},
+         {name:'אפרסק',cal:39,portion:'פרי בינוני',note:'פחות סוכר, אינדקס גליקמי נמוך יותר'}]},
+  {kw:['אננס'],name:'אננס',cal:50,portion:'100 גרם',
+   alts:[{name:'אבטיח',cal:30,portion:'150 גרם',note:'נפח גדול יותר, פחות קלוריות'},
+         {name:'תות שדה',cal:33,portion:'100 גרם',note:'פחות סוכר, יותר ויטמין C'}]},
+  {kw:['תמר','תמרים'],name:'תמר',cal:55,portion:'תמר אחד',
+   alts:[{name:'שזיף מיובש x1',cal:23,portion:'שזיף מיובש',note:'פחות מחצי קלוריות'},
+         {name:'אגוז מלך x3',cal:60,portion:'3 אגוזים',note:'שומן בריא, שובע ארוך יותר'}]},
+  {kw:['תפוז','קלמנטינה','מנדרינה'],name:'תפוז',cal:45,portion:'תפוז בינוני',
+   alts:[{name:'אשכולית',cal:40,portion:'חצי',note:'פחות סוכר, עשיר בויטמין C'},
+         {name:'לימון סחוט',cal:10,portion:'כוס עם מים',note:'מינימום קלוריות, ויטמין C מלא'}]},
+  {kw:['אשכולית'],name:'אשכולית',cal:40,portion:'חצי אשכולית',
+   alts:[{name:'תות שדה',cal:33,portion:'100 גרם',note:'פחות קלוריות, יותר ויטמין C'},
+         {name:'לימון + מים',cal:10,portion:'כוס',note:'אפס כמעט קלוריות'}]},
+  {kw:['דובדבן','דובדבנים'],name:'דובדבן',cal:50,portion:'100 גרם',
+   alts:[{name:'תות שדה',cal:33,portion:'100 גרם',note:'30% פחות קלוריות'},
+         {name:'אוכמניות',cal:57,portion:'100 גרם',note:'יותר אנטיאוקסידנטים'}]},
+  {kw:['אוכמניות','בלוברי'],name:'אוכמניות',cal:57,portion:'100 גרם',
+   alts:[{name:'תות שדה',cal:33,portion:'100 גרם',note:'פחות קלוריות, ויטמין C גבוה'},
+         {name:'פטל',cal:52,portion:'100 גרם',note:'יותר סיבים, פחות קלוריות'}]},
+  {kw:['צימוקים'],name:'צימוקים',cal:300,portion:'100 גרם',
+   alts:[{name:'ענבים טריים',cal:70,portion:'100 גרם',note:'70% פחות קלוריות — אל תייבש!'},
+         {name:'תות שדה מיובש',cal:150,portion:'50 גרם',note:'חצי הקלוריות'}]},
+  {kw:['תאנה','תאנים'],name:'תאנה',cal:47,portion:'תאנה טרייה',
+   alts:[{name:'שזיף טרי',cal:30,portion:'שזיף',note:'פחות קלוריות, יותר מים'},
+         {name:'תות שדה x10',cal:33,portion:'10 תותים',note:'נפח גדול יותר, פחות סוכר'}]},
+
+  // VEGETABLES (הוספות)
+  {kw:['תפוח אדמה','תפו"א','פריכיות','פרנץ׳ פרייז','פריז'],name:'תפוח אדמה',cal:80,portion:'בינוני מבושל (100ג׳)',
+   alts:[{name:'בטטה',cal:86,portion:'100 גרם',note:'אינדקס גליקמי נמוך יותר, ויטמין A'},
+         {name:'כרובית מבושלת',cal:25,portion:'100 גרם',note:'70% פחות קלוריות'}]},
+  {kw:['בטטה'],name:'בטטה',cal:86,portion:'100 גרם',
+   alts:[{name:'תפוח אדמה מבושל',cal:80,portion:'100 גרם',note:'דומה — בטטה עדיפה גליקמית'},
+         {name:'גזר מבושל',cal:35,portion:'100 גרם',note:'60% פחות קלוריות'}]},
+  {kw:['תירס'],name:'תירס',cal:86,portion:'קלח בינוני',
+   alts:[{name:'אפונה',cal:42,portion:'חצי כוס',note:'פחות קלוריות, יותר חלבון'},
+         {name:'שעועית ירוקה',cal:31,portion:'כוס',note:'60% פחות קלוריות'}]},
+  {kw:['ברוקולי'],name:'ברוקולי',cal:35,portion:'100 גרם',
+   alts:[{name:'כרובית',cal:25,portion:'100 גרם',note:'פחות קלוריות, אותם יתרונות'},
+         {name:'כרוב',cal:25,portion:'100 גרם',note:'זול, עשיר בוויטמין K'}]},
+  {kw:['פלפל','פלפל אדום','פלפל צהוב'],name:'פלפל',cal:31,portion:'פלפל בינוני (100ג׳)',
+   alts:[{name:'מלפפון',cal:16,portion:'מלפפון שלם',note:'חצי הקלוריות, מרענן'},
+         {name:'עגבנייה',cal:18,portion:'עגבנייה בינונית',note:'אנטיאוקסידנטים גבוהים'}]},
+  {kw:['חציל'],name:'חציל',cal:25,portion:'100 גרם חי',
+   alts:[{name:'קישוא',cal:17,portion:'100 גרם',note:'פחות קלוריות, יותר מים'},
+         {name:'פטריות',cal:22,portion:'100 גרם',note:'דומה בקלוריות, עשיר בוויטמין D'}]},
+  {kw:['קישוא','זוקיני'],name:'קישוא',cal:17,portion:'100 גרם',
+   alts:[{name:'מלפפון',cal:16,portion:'100 גרם',note:'כמעט זהה'},
+         {name:'סלרי',cal:16,portion:'100 גרם',note:'מינימום קלוריות, מרענן'}]},
+  {kw:['פטריות'],name:'פטריות',cal:22,portion:'100 גרם',
+   alts:[{name:'קישוא',cal:17,portion:'100 גרם',note:'פחות קלוריות, ניתן לבישול דומה'},
+         {name:'פלפל',cal:31,portion:'100 גרם',note:'יותר ויטמין C'}]},
+  {kw:['כרוב','כרוב סגול'],name:'כרוב',cal:25,portion:'100 גרם',
+   alts:[{name:'חסה',cal:15,portion:'100 גרם',note:'הכי נמוך קלוריות'},
+         {name:'תרד',cal:23,portion:'100 גרם',note:'עשיר בברזל ופולאט'}]},
+  {kw:['תרד'],name:'תרד',cal:23,portion:'100 גרם',
+   alts:[{name:'חסה',cal:15,portion:'100 גרם',note:'קל יותר, נמוך יותר בקלוריות'},
+         {name:'כרוב',cal:25,portion:'100 גרם',note:'כמעט זהה, אחר בטעם'}]},
+
+  // DAIRY ADDITIONS
+  {kw:['גבינה צהובה','גאודה','צ\'דר','גבינה מלוחה'],name:'גבינה צהובה',cal:90,portion:'פרוסה אחת (25ג׳)',
+   alts:[{name:'גבינה לבנה 5%',cal:25,portion:'25 גרם',note:'שליש הקלוריות, אותו שובע'},
+         {name:'קוטג׳ 1%',cal:14,portion:'25 גרם',note:'מינימום קלוריות, עשיר בחלבון'}]},
+  {kw:['לאבנה'],name:'לאבנה',cal:60,portion:'2 כפות (30ג׳)',
+   alts:[{name:'גבינה לבנה 5%',cal:30,portion:'30 גרם',note:'חצי הקלוריות'},
+         {name:'קוטג׳ 1%',cal:17,portion:'30 גרם',note:'הכי קליל, עשיר בחלבון'}]},
+  // GRAINS ADDITIONS
+  {kw:['מוזלי','מוזלי עם פירות','מוזלי עם מייפל','מוזלי עם דבש'],name:'מוזלי עם פירות ודבש',cal:400,portion:'קערה (80ג׳ יבש + חלב)',
+   alts:[{name:'שיבולת שועל לא קלויה',cal:280,portion:'60ג׳ + חלב דל שומן',note:'120 קלוריות פחות, יותר סיבים'},
+         {name:'יוגורט יווני + פרי',cal:180,portion:'150ג׳ + בננה',note:'הרבה פחות, יותר חלבון'}]},
+  {kw:['לחם מחמצת','סאוורדו'],name:'לחם מחמצת',cal:110,portion:'פרוסה (40ג׳)',
+   alts:[{name:'לחם שיפון מלא',cal:65,portion:'פרוסה',note:'40% פחות קלוריות'},
+         {name:'קרקר שיפון',cal:35,portion:'2 קרקרים',note:'שליש הקלוריות'}]},
+  {kw:['לחמניית באגט','באגט'],name:'לחמניית באגט',cal:220,portion:'לחמנייה (80ג׳)',
+   alts:[{name:'פיתה דיאט קטנה',cal:130,portion:'פיתה קטנה',note:'40% פחות'},
+         {name:'2 פרוסות לחם שיפון',cal:130,portion:'2 פרוסות',note:'יותר סיבים, יותר שובע'}]},
+  {kw:['בייגלה','ביגל'],name:'בייגלה',cal:260,portion:'בייגלה אחד (105ג׳)',
+   alts:[{name:'פיתה דיאט קטנה',cal:130,portion:'פיתה קטנה',note:'חצי הקלוריות'},
+         {name:'לחמנייה + גבינה לבנה',cal:190,portion:'לחמנייה + 30ג׳',note:'פחות עמילן, יותר חלבון'}]},
+  {kw:['פוקצ\'ה','פוקצה'],name:'פוקצ\'ה',cal:270,portion:'פרוסה (100ג׳)',
+   alts:[{name:'לחם שיפון x2',cal:130,portion:'2 פרוסות',note:'חצי הקלוריות'},
+         {name:'פיתה דיאט',cal:130,portion:'פיתה קטנה',note:'50% פחות, פחות שמן'}]},
+  {kw:['פתיתים'],name:'פתיתים',cal:255,portion:'כוס מבושל (200ג׳)',
+   alts:[{name:'אורז מלא',cal:230,portion:'כוס מבושל',note:'25% פחות, יותר סיבים'},
+         {name:'כרובית מבושלת',cal:50,portion:'כוס',note:'80% פחות, תחליף מצוין'}]},
+  {kw:['קוסקוס'],name:'קוסקוס',cal:200,portion:'כוס מבושל (175ג׳)',
+   alts:[{name:'כרובית קוסקוס',cal:50,portion:'כוס',note:'75% פחות, ויטמינים רבים'},
+         {name:'קינואה',cal:220,portion:'כוס מבושל',note:'דומה בקלוריות, יותר חלבון'}]},
+  // PROTEINS ADDITIONS
+  {kw:['לזניה','לזניה חלבית'],name:'לזניה חלבית',cal:350,portion:'מנה (250ג׳)',
+   alts:[{name:'לזניה ירקות קטנה',cal:220,portion:'200 גרם',note:'35% פחות קלוריות'},
+         {name:'פסטה + רוטב עגבניות',cal:280,portion:'מנה',note:'פחות גבינה, פחות שומן'}]},
+  {kw:['פרגית','סטייק פרגית'],name:'סטייק פרגית',cal:270,portion:'סטייק (150ג׳)',
+   alts:[{name:'חזה עוף בגריל',cal:165,portion:'150 גרם',note:'40% פחות קלוריות'},
+         {name:'חזה הודו',cal:135,portion:'150 גרם',note:'50% פחות, הכי רזה'}]},
+  {kw:['שיפוד פרגית','שיפוד עוף','שיפודים'],name:'שיפוד פרגית',cal:220,portion:'שיפוד (120ג׳)',
+   alts:[{name:'שיפוד חזה עוף',cal:140,portion:'120 גרם',note:'35% פחות קלוריות'},
+         {name:'שיפוד הודו',cal:115,portion:'120 גרם',note:'47% פחות, הכי רזה'}]},
+  {kw:['גונדי','גונדי פרסי','קציצות חומוס'],name:'גונדי פרסי',cal:290,portion:'3 כדורים (~200ג׳)',
+   alts:[{name:'גונדי 2 כדורים',cal:195,portion:'130 גרם',note:'מנה קטנה יותר'},
+         {name:'מרק עוף + ירקות',cal:100,portion:'קערה',note:'70% פחות, מחמם ומלא'}]},
+  {kw:['עוף ברוטב אדום','עוף מבושל ברוטב אדום','עוף ברוטב עגבניות'],name:'עוף ברוטב אדום',cal:380,portion:'מנה (200ג׳ עם רוטב)',
+   alts:[{name:'חזה עוף ברוטב עגבניות',cal:280,portion:'200 גרם',note:'25% פחות — חזה במקום פרגית'},
+         {name:'חזה הודו ברוטב',cal:230,portion:'200 גרם',note:'40% פחות, הרבה יותר רזה'}]},
+  {kw:['צ\'יפס','פריז','פרנץ\' פרייז'],name:'צ\'יפס',cal:470,portion:'מנה מסעדה (150ג׳)',
+   alts:[{name:'צ\'יפס אפוי בתנור',cal:160,portion:'150 גרם',note:'65% פחות שומן'},
+         {name:'בטטה צלויה',cal:130,portion:'150 גרם',note:'73% פחות, ויטמינים'}]},
+
+  // LEGUMES
+  {kw:['עדשים','מרק עדשים'],name:'עדשים',cal:230,portion:'כוס מבושל',
+   alts:[{name:'עדשים אדומות במרק',cal:180,portion:'קערה מרק',note:'יותר נוזלים = יותר שובע'},
+         {name:'שעועית ירוקה',cal:30,portion:'כוס',note:'הרבה פחות קלוריות, עשיר בסיבים'}]},
+  {kw:['שעועית','פול','גרגיר נחלים','חומוס גרגרים'],name:'קטניות',cal:200,portion:'כוס מבושל',
+   alts:[{name:'עדשים',cal:230,portion:'כוס',note:'פחות או יותר זהה — לסירוגין'},
+         {name:'מרק קטניות',cal:160,portion:'קערה',note:'יותר נוזלים, יותר שובע לאותן קלוריות'}]},
+];
+
+// ═══════════════════════════════════════════
+// MEAL LOOKUP & MATCHING
+// ═══════════════════════════════════════════
+function findFood(text) {
+  const t = text.toLowerCase();
+  for (const f of FOOD_DB) {
+    if (f.kw.some(k => t.includes(k))) return f;
+  }
+  return null;
+}
+
+const MEAL_ICONS = {breakfast:'🌅',lunch:'☀️',dinner:'🌙',snack:'🍎',drink:'💧'};
+const MEAL_LABELS = {breakfast:'בוקר',lunch:'צהריים',dinner:'ערב',snack:'חטיף',drink:'שתייה'};
+
+// ═══════════════════════════════════════════
+// STATE & STORAGE
+// ═══════════════════════════════════════════
+let entries = JSON.parse(localStorage.getItem('nutrition_entries') || '[]');
+let currentFilter = 'today';
+let selectedMeal = 'breakfast';
+let recog = null;
+let listening = false;
+
+function save() { localStorage.setItem('nutrition_entries', JSON.stringify(entries)); }
+
+function todayStr() { return new Date().toISOString().slice(0,10); }
+function nowTime() {
+  const n = new Date();
+  return n.getHours().toString().padStart(2,'0') + ':' + n.getMinutes().toString().padStart(2,'0');
+}
+function fmtDateHe(iso) {
+  const [y,m,d] = iso.split('-');
+  const days = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+  const months = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+  const dt = new Date(`${iso}T12:00:00`);
+  return `יום ${days[dt.getDay()]}, ${parseInt(d)} ${months[parseInt(m)-1]}`;
+}
+
+// Auto-detect meal based on time of day
+function autoMeal() {
+  const h = new Date().getHours();
+  if (h < 10) return 'breakfast';
+  if (h < 14) return 'lunch';
+  if (h < 19) return 'dinner';
+  return 'snack';
+}
+
+// ═══════════════════════════════════════════
+// VOICE RECOGNITION
+// ═══════════════════════════════════════════
+function initSpeech() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { document.getElementById('voiceSt').textContent = '⚠️ נא פתח ב-Chrome'; return; }
+  recog = new SR();
+  recog.lang = 'he-IL';
+  recog.continuous = false;
+  recog.interimResults = true;
+  recog.onresult = e => {
+    let fin = '', interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) fin += e.results[i][0].transcript;
+      else interim += e.results[i][0].transcript;
+    }
+    const txt = fin || interim;
+    const tr = document.getElementById('voiceTranscript');
+    tr.style.display = 'block';
+    tr.textContent = txt;
+    if (fin) processVoice(fin.trim());
+  };
+  recog.onerror = () => { stopListen(); setSt('לחץ להקלטה'); };
+  recog.onend = () => { if (listening) stopListen(); };
+}
+
+function toggleListen() { listening ? stopListen() : startListen(); }
+
+function startListen() {
+  if (!recog) { toast('נא פתח ב-Chrome'); return; }
+  listening = true;
+  document.getElementById('micBtn').classList.add('listening');
+  document.getElementById('micBtn').textContent = '⏹';
+  setSt('🔴 מאזין...');
+  document.getElementById('voiceTranscript').style.display = 'none';
+  document.getElementById('voiceTranscript').textContent = '';
+  try { recog.start(); } catch(e) {}
+}
+
+function stopListen() {
+  listening = false;
+  document.getElementById('micBtn').classList.remove('listening');
+  document.getElementById('micBtn').textContent = '🎤';
+  setSt('לחץ להקלטה');
+  try { recog.stop(); } catch(e) {}
+}
+
+function setSt(t) { document.getElementById('voiceSt').textContent = t; }
+
+function processVoice(text) {
+  stopListen();
+  setSt('✅ זוהה: ' + text.substring(0, 30));
+
+  const match = findFood(text);
+  if (match) {
+    addEntryData({ name: match.name + (match.name !== text ? ` (${text})` : ''), cal: match.cal, fromDB: match });
+    hideUnknownBanner();
+  } else {
+    document.getElementById('inputFood').value = text;
+    document.getElementById('inputCal').value = '';
+    document.getElementById('inputCal').focus();
+    showUnknownBanner(text);
+  }
+}
+
+function showUnknownBanner(foodName) {
+  const banner = document.getElementById('unknownBanner');
+  document.getElementById('unknownText').textContent = `"${foodName}" לא נמצא בבסיס הנתונים — מלא קלוריות ידנית:`;
+  banner.classList.add('show');
+  // Store food name for search
+  banner.dataset.food = foodName;
+}
+
+function hideUnknownBanner() {
+  document.getElementById('unknownBanner').classList.remove('show');
+}
+
+function searchCalories() {
+  const banner = document.getElementById('unknownBanner');
+  const food = banner.dataset.food || document.getElementById('inputFood').value.trim() || '';
+  const query = encodeURIComponent(food + ' קלוריות ל100 גרם');
+  // Open Israeli health / calorie search
+  window.open('https://www.foodsdictionary.co.il/Search?q=' + query, '_blank');
+}
+
+// ═══════════════════════════════════════════
+// MEAL PICKER
+// ═══════════════════════════════════════════
+function pickMeal(el) {
+  document.querySelectorAll('.meal-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  selectedMeal = el.dataset.meal;
+}
+
+// ═══════════════════════════════════════════
+// ADD ENTRY
+// ═══════════════════════════════════════════
+function addEntry() {
+  const name = document.getElementById('inputFood').value.trim();
+  const cal = parseInt(document.getElementById('inputCal').value) || 0;
+  if (!name) { toast('⚠️ נא להזין שם מזון'); return; }
+
+  const match = findFood(name);
+  const finalCal = cal > 0 ? cal : (match ? match.cal : 0);
+  if (finalCal === 0 && !confirm('קלוריות לא הוזנו — להמשיך עם 0?')) return;
+
+  addEntryData({ name, cal: finalCal, fromDB: match });
+  document.getElementById('inputFood').value = '';
+  document.getElementById('inputCal').value = '';
+  hideUnknownBanner();
+}
+
+function addEntryData({ name, cal, fromDB }) {
+  const entry = {
+    id: Date.now(),
+    name, cal,
+    meal: selectedMeal,
+    date: todayStr(),
+    time: nowTime()
+  };
+  entries.unshift(entry);
+  save();
+  render();
+  updateStats();
+  toast('✅ נוסף: ' + name + (cal > 0 ? ' · ' + cal + ' קק"ל' : ''));
+
+  // Show suggestions if available
+  if (fromDB && fromDB.alts && fromDB.alts.length > 0) {
+    showSuggestion(fromDB);
+  } else {
+    document.getElementById('suggestionCard').classList.remove('show');
+  }
+}
+
+function deleteEntry(id) {
+  entries = entries.filter(e => e.id !== id);
+  save(); render(); updateStats();
+  document.getElementById('suggestionCard').classList.remove('show');
+  toast('🗑 נמחק');
+}
+
+// ═══════════════════════════════════════════
+// SUGGESTIONS
+// ═══════════════════════════════════════════
+function showSuggestion(foodData) {
+  const card = document.getElementById('suggestionCard');
+  const items = document.getElementById('sugItems');
+  const saving = a => foodData.cal - a.cal;
+
+  items.innerHTML = foodData.alts.map(a => `
+    <div class="sug-item">
+      <div>
+        <div class="sug-name">${a.name}</div>
+        <div class="sug-portion">${a.portion} · ${a.note}</div>
+      </div>
+      <div class="sug-right">
+        <div class="sug-cal">${a.cal} קק"ל</div>
+        ${saving(a) > 0 ? `<div class="sug-save">חסכון: ${saving(a)} קק"ל</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+  card.classList.add('show');
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function closeSuggestion() {
+  document.getElementById('suggestionCard').classList.remove('show');
+}
+
+// ═══════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════
+function setFilter(f) {
+  currentFilter = f;
+  ['today','all'].forEach(x => document.getElementById('fb-'+x).classList.toggle('active', x === f));
+  render();
+}
+
+function render() {
+  const today = todayStr();
+  let list = currentFilter === 'today'
+    ? entries.filter(e => e.date === today)
+    : entries;
+
+  const el = document.getElementById('entriesList');
+  if (list.length === 0) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">🥗</div><div class="empty-title">${currentFilter==='today'?'אין רשומות להיום — לחץ על המיקרופון!':'אין רשומות עדיין'}</div></div>`;
+    return;
+  }
+
+  // Group by date
+  const byDate = {};
+  list.forEach(e => { if (!byDate[e.date]) byDate[e.date] = []; byDate[e.date].push(e); });
+  const dates = Object.keys(byDate).sort((a,b) => b.localeCompare(a));
+
+  el.innerHTML = dates.map(date => {
+    const dayEntries = byDate[date];
+    const dayTotal = dayEntries.reduce((s,e) => s + e.cal, 0);
+    const label = date === today ? 'היום' : fmtDateHe(date);
+    return `
+      <div class="day-header">
+        <div class="day-label">📅 ${label}</div>
+        <div class="day-total-badge">${dayTotal} קק"ל</div>
+      </div>
+      ${dayEntries.map(e => `
+        <div class="entry-card ${e.meal==='drink'?'drink':''}">
+          <div class="entry-icon">${MEAL_ICONS[e.meal]}</div>
+          <div class="entry-body">
+            <div class="entry-name">${esc(e.name)}</div>
+            <div class="entry-meta">${e.time} · <span class="meal-tag ${e.meal}">${MEAL_LABELS[e.meal]}</span></div>
+          </div>
+          <div class="entry-right">
+            <div class="entry-cal ${e.meal==='drink'?'drink-cal':''}">${e.cal}<span class="entry-cal-unit"> קק"ל</span></div>
+          </div>
+          <button class="del-btn" onclick="deleteEntry(${e.id})">🗑</button>
+        </div>
+      `).join('')}
+    `;
+  }).join('');
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ═══════════════════════════════════════════
+// STATS
+// ═══════════════════════════════════════════
+function updateStats() {
+  const today = todayStr();
+  const todayEntries = entries.filter(e => e.date === today);
+  const todayCal = todayEntries.reduce((s,e) => s + e.cal, 0);
+  const uniqueDays = new Set(entries.map(e => e.date)).size;
+  document.getElementById('st-cal').textContent = todayCal;
+  document.getElementById('st-entries').textContent = todayEntries.length;
+  document.getElementById('st-days').textContent = uniqueDays;
+}
+
+// ═══════════════════════════════════════════
+// EXCEL EXPORT  — each day = column group
+// ═══════════════════════════════════════════
+function doExport() {
+  const XLSX = window.XLSX;
+  if (!XLSX) { toast('⚠️ טוען...'); return; }
+
+  // Group by date, sorted ascending
+  const byDate = {};
+  entries.forEach(e => { if (!byDate[e.date]) byDate[e.date] = []; byDate[e.date].push(e); });
+  const dates = Object.keys(byDate).sort();
+
+  if (dates.length === 0) { toast('⚠️ אין נתונים לייצא'); return; }
+
+  // Find max entries per day
+  const maxRows = Math.max(...dates.map(d => byDate[d].length));
+
+  // Build AOA (Array Of Arrays)
+  // Layout: per day = 3 columns: [שעה | מה אכלת | קק"ל]
+  // Columns separated by blank col
+  const colsPerDay = 3;
+  const gapCols = 1;
+  const totalCols = dates.length * colsPerDay + (dates.length - 1) * gapCols;
+
+  // Row 0: Date headers (merged over 3 cols each)
+  // Row 1: Sub-headers (שעה / מזון / קלוריות)
+  // Row 2..N: data
+  // Row N+1: total
+
+  const numDataRows = maxRows + 3; // 2 header rows + data rows + 1 total row
+  const aoa = Array.from({ length: numDataRows }, () => Array(totalCols).fill(''));
+
+  const merges = [];
+  const colStyles = {}; // track column styles
+
+  dates.forEach((date, di) => {
+    const baseCol = di * (colsPerDay + gapCols);
+    const dayEntries = byDate[date];
+    const dayTotal = dayEntries.reduce((s,e) => s + e.cal, 0);
+    const today = todayStr();
+    const label = date === today ? `היום (${date})` : fmtDateHe(date) + ` ${date}`;
+
+    // Row 0: date header spanning 3 cols
+    aoa[0][baseCol] = label;
+    merges.push({ s: { r:0, c:baseCol }, e: { r:0, c:baseCol+colsPerDay-1 } });
+
+    // Row 1: sub-headers
+    aoa[1][baseCol] = 'שעה';
+    aoa[1][baseCol+1] = 'מה אכלתי / שתיתי';
+    aoa[1][baseCol+2] = 'קלוריות';
+
+    // Rows 2+: data
+    dayEntries.forEach((e, ri) => {
+      const row = ri + 2;
+      aoa[row][baseCol] = e.time;
+      aoa[row][baseCol+1] = e.name;
+      aoa[row][baseCol+2] = e.cal;
+    });
+
+    // Total row
+    const totalRow = numDataRows - 1;
+    aoa[totalRow][baseCol] = '';
+    aoa[totalRow][baseCol+1] = 'סה"כ';
+    aoa[totalRow][baseCol+2] = dayTotal;
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!merges'] = merges;
+
+  // Column widths
+  const cols = [];
+  dates.forEach((_, di) => {
+    const baseCol = di * (colsPerDay + gapCols);
+    cols[baseCol] = { wch: 7 };
+    cols[baseCol+1] = { wch: 22 };
+    cols[baseCol+2] = { wch: 9 };
+    if (di < dates.length - 1) cols[baseCol+3] = { wch: 2 }; // gap
+  });
+  ws['!cols'] = cols;
+  ws['!sheetViews'] = [{ rightToLeft: true }];
+
+  // Apply styles
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for (let R = range.s.r; R <= range.e.r; R++) {
+    for (let C = range.s.c; C <= range.e.c; C++) {
+      const addr = XLSX.utils.encode_cell({ r: R, c: C });
+      if (!ws[addr]) ws[addr] = { v: '', t: 's' };
+
+      // Determine which day this belongs to
+      const dayIdx = Math.floor(C / (colsPerDay + gapCols));
+      const colInDay = C % (colsPerDay + gapCols);
+      const isGap = colInDay === colsPerDay;
+      const isDateHeader = R === 0;
+      const isSubHeader = R === 1;
+      const isTotalRow = R === numDataRows - 1;
+      const isCalCol = colInDay === 2;
+      const isTimeCol = colInDay === 0;
+
+      const dayColors = ['217346','1d4ed8','7c3aed','c2410c','0369a1','92400e','166534'];
+      const dayColor = dayColors[dayIdx % dayColors.length];
+
+      let font, fill, alignment;
+
+      if (isGap) {
+        fill = { fgColor: { rgb: 'f4f6fa' }, patternType: 'solid' };
+        font = { sz: 9 };
+        alignment = { horizontal: 'center', vertical: 'center' };
+      } else if (isDateHeader) {
+        font = { bold: true, sz: 12, color: { rgb: 'FFFFFF' } };
+        fill = { fgColor: { rgb: dayColor }, patternType: 'solid' };
+        alignment = { horizontal: 'center', vertical: 'center', readingOrder: 2 };
+      } else if (isSubHeader) {
+        font = { bold: true, sz: 10, color: { rgb: '1a1f36' } };
+        fill = { fgColor: { rgb: 'dde2ec' }, patternType: 'solid' };
+        alignment = { horizontal: 'center', vertical: 'center', readingOrder: 2 };
+      } else if (isTotalRow) {
+        font = { bold: true, sz: 11, color: { rgb: isCalCol ? dayColor : '1a1f36' } };
+        fill = { fgColor: { rgb: 'f0fdf4' }, patternType: 'solid' };
+        alignment = { horizontal: isCalCol ? 'center' : 'right', vertical: 'center', readingOrder: 2 };
+      } else {
+        const isEven = (R - 2) % 2 === 0;
+        font = {
+          sz: 10,
+          bold: isCalCol,
+          color: { rgb: isCalCol ? '16a34a' : isTimeCol ? '8896b3' : '1a1f36' }
+        };
+        fill = { fgColor: { rgb: isEven ? 'ffffff' : 'f9fffe' }, patternType: 'solid' };
+        alignment = { horizontal: isCalCol ? 'center' : 'right', vertical: 'center', readingOrder: 2 };
+      }
+
+      ws[addr].s = {
+        font, fill, alignment,
+        border: isGap ? {} : {
+          top: { style: 'thin', color: { rgb: 'dde2ec' } },
+          bottom: { style: 'thin', color: { rgb: 'dde2ec' } },
+          left: { style: 'thin', color: { rgb: 'dde2ec' } },
+          right: { style: 'thin', color: { rgb: 'dde2ec' } }
+        }
+      };
+    }
+  }
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'מעקב תזונה');
+  wb.Workbook = { Views: [{ RTL: true }] };
+
+  const dateStr = new Date().toLocaleDateString('he-IL').replace(/\//g, '-');
+  XLSX.writeFile(wb, `מעקב_תזונה_${dateStr}.xlsx`);
+  toast('📊 Excel יוצא בהצלחה!');
+}
+
+// ═══════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+window.onload = () => {
+  // Auto-select meal based on time
+  selectedMeal = autoMeal();
+  document.querySelectorAll('.meal-pill').forEach(p => {
+    p.classList.toggle('active', p.dataset.meal === selectedMeal);
+  });
+
+  initSpeech();
+  render();
+  updateStats();
+};
+</script>
+</body>
+</html>
