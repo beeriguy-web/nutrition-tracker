@@ -128,6 +128,26 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);min-h
 
 .toast{position:fixed;bottom:calc(90px + var(--safe-bottom));left:50%;transform:translateX(-50%) translateY(30px);background:#1e293b;color:white;padding:11px 18px;border-radius:100px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:all .3s;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.25);}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* MULTI-FOOD CARD */
+.multifood-card{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:12px;border-right:4px solid var(--blue);display:none;}
+.multifood-card.show{display:block;}
+.mf-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.mf-title{font-size:13px;font-weight:700;color:var(--blue);}
+.mf-item{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border-light);flex-wrap:wrap;}
+.mf-item:last-child{border-bottom:none;}
+.mf-item-name{flex:1;font-size:13px;font-weight:600;min-width:120px;}
+.mf-item-cal{font-size:13px;font-weight:800;color:var(--accent);min-width:60px;text-align:left;}
+.mf-gram-input{width:68px;border:1px solid var(--border);border-radius:8px;padding:5px 8px;font-family:'Heebo',sans-serif;font-size:13px;text-align:center;color:var(--text);}
+.mf-gram-input:focus{outline:none;border-color:var(--blue);}
+.mf-gram-label{font-size:11px;color:var(--text-dim);}
+.mf-remove{background:none;border:none;cursor:pointer;font-size:13px;color:var(--text-dim);padding:2px 4px;flex-shrink:0;}
+.mf-remove:hover{color:var(--danger);}
+.mf-footer{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid var(--border-light);}
+.mf-total-label{font-size:14px;font-weight:800;color:var(--text);}
+.mf-total-label span{color:var(--accent);}
+.mf-confirm-btn{background:var(--accent);color:white;border:none;border-radius:10px;padding:9px 18px;font-family:'Heebo',sans-serif;font-weight:700;font-size:13px;cursor:pointer;}
+.mf-confirm-btn:hover{background:var(--accent-dark);}
 </style>
 </head>
 <body>
@@ -192,6 +212,19 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);min-h
     <input type="text" class="input-food" id="inputFood" placeholder="מה אכלת / שתית?" onkeydown="if(event.key==='Enter')addEntry()">
     <input type="number" class="input-cal" id="inputCal" placeholder="קק״ל" min="0" onkeydown="if(event.key==='Enter')addEntry()">
     <button class="btn-add" onclick="addEntry()">➕ הוסף</button>
+  </div>
+
+  <!-- MULTI-FOOD CARD -->
+  <div class="multifood-card" id="multifoodCard">
+    <div class="mf-header">
+      <div class="mf-title" id="mfTitle">🍽️ כמה אכלת?</div>
+      <button class="sug-close" onclick="closeMultifood()">✕</button>
+    </div>
+    <div id="mfItems"></div>
+    <div class="mf-footer">
+      <div class="mf-total-label">סה"כ: <span id="mfTotal">0</span> קק"ל</div>
+      <button class="mf-confirm-btn" onclick="confirmMultifood()">✅ הוסף</button>
+    </div>
   </div>
 
   <!-- FILTER -->
@@ -5152,12 +5185,42 @@ const FOOD_DB = [
 // ═══════════════════════════════════════════
 // MEAL LOOKUP & MATCHING
 // ═══════════════════════════════════════════
+function matchWord(text, kw) {
+  if (kw.length < 3) return false;
+  const i = text.indexOf(kw);
+  if (i === -1) return false;
+  const pre = i === 0 || /[\s,\-\/.(]/.test(text[i - 1]);
+  const post = i + kw.length >= text.length || /[\s,\-\/.(]/.test(text[i + kw.length]);
+  return pre && post;
+}
+
 function findFood(text) {
-  const t = text.toLowerCase();
   for (const f of FOOD_DB) {
-    if (f.kw.some(k => t.includes(k))) return f;
+    if (f.kw.some(k => matchWord(text, k))) return f;
   }
   return null;
+}
+
+function findAllFoods(text) {
+  const used = new Array(text.length).fill(false);
+  const results = [];
+  for (const f of FOOD_DB) {
+    for (const k of f.kw) {
+      if (k.length < 3) continue;
+      const i = text.indexOf(k);
+      if (i === -1) continue;
+      const pre = i === 0 || /[\s,\-\/.(]/.test(text[i - 1]);
+      const post = i + k.length >= text.length || /[\s,\-\/.(]/.test(text[i + k.length]);
+      if (!pre || !post) continue;
+      let overlap = false;
+      for (let p = i; p < i + k.length; p++) { if (used[p]) { overlap = true; break; } }
+      if (overlap) continue;
+      for (let p = i; p < i + k.length; p++) used[p] = true;
+      results.push({ food: f, keyword: k, pos: i });
+      break;
+    }
+  }
+  return results.sort((a, b) => a.pos - b.pos);
 }
 
 const MEAL_ICONS = {breakfast:'🌅',lunch:'☀️',dinner:'🌙',snack:'🍎',drink:'💧'};
@@ -5248,17 +5311,29 @@ function setSt(t) { document.getElementById('voiceSt').textContent = t; }
 function processVoice(text) {
   stopListen();
   setSt('✅ זוהה: ' + text.substring(0, 30));
+  hideUnknownBanner();
 
-  const match = findFood(text);
-  if (match) {
-    addEntryData({ name: match.name + (match.name !== text ? ` (${text})` : ''), cal: match.cal, fromDB: match });
-    hideUnknownBanner();
-  } else {
+  const matches = findAllFoods(text);
+
+  if (matches.length === 0) {
     document.getElementById('inputFood').value = text;
     document.getElementById('inputCal').value = '';
     document.getElementById('inputCal').focus();
     showUnknownBanner(text);
+    return;
   }
+
+  if (matches.length === 1 && !isMohEntry(matches[0].food)) {
+    const food = matches[0].food;
+    addEntryData({ name: food.name + (food.name !== text ? ` (${text})` : ''), cal: food.cal, fromDB: food });
+    return;
+  }
+
+  const title = matches.length === 1
+    ? `🥗 כמה גרם אכלת מ"${matches[0].food.name.split(',')[0]}"?`
+    : `🍽️ זיהיתי ${matches.length} מאכלים — הוסף כמות:`;
+  document.getElementById('mfTitle').textContent = title;
+  showMultifoodCard(matches);
 }
 
 function showUnknownBanner(foodName) {
@@ -5295,14 +5370,35 @@ function pickMeal(el) {
 // ═══════════════════════════════════════════
 function addEntry() {
   const name = document.getElementById('inputFood').value.trim();
-  const cal = parseInt(document.getElementById('inputCal').value) || 0;
+  const calInput = parseInt(document.getElementById('inputCal').value) || 0;
   if (!name) { toast('⚠️ נא להזין שם מזון'); return; }
 
-  const match = findFood(name);
-  const finalCal = cal > 0 ? cal : (match ? match.cal : 0);
-  if (finalCal === 0 && !confirm('קלוריות לא הוזנו — להמשיך עם 0?')) return;
+  const matches = findAllFoods(name);
 
-  addEntryData({ name, cal: finalCal, fromDB: match });
+  if (matches.length === 0) {
+    if (calInput === 0 && !confirm('קלוריות לא הוזנו — להמשיך עם 0?')) return;
+    addEntryData({ name, cal: calInput, fromDB: null });
+    document.getElementById('inputFood').value = '';
+    document.getElementById('inputCal').value = '';
+    hideUnknownBanner();
+    return;
+  }
+
+  if (matches.length === 1 && !isMohEntry(matches[0].food)) {
+    const food = matches[0].food;
+    const cal = calInput > 0 ? calInput : food.cal;
+    addEntryData({ name: food.name, cal, fromDB: food });
+    document.getElementById('inputFood').value = '';
+    document.getElementById('inputCal').value = '';
+    hideUnknownBanner();
+    return;
+  }
+
+  const title = matches.length === 1
+    ? `🥗 כמה גרם אכלת מ"${matches[0].food.name.split(',')[0]}"?`
+    : `🍽️ זיהיתי ${matches.length} מאכלים — הוסף כמות:`;
+  document.getElementById('mfTitle').textContent = title;
+  showMultifoodCard(matches);
   document.getElementById('inputFood').value = '';
   document.getElementById('inputCal').value = '';
   hideUnknownBanner();
@@ -5581,6 +5677,81 @@ function doExport() {
   const dateStr = new Date().toLocaleDateString('he-IL').replace(/\//g, '-');
   XLSX.writeFile(wb, `מעקב_תזונה_${dateStr}.xlsx`);
   toast('📊 Excel יוצא בהצלחה!');
+}
+
+// ═══════════════════════════════════════════
+// MULTI-FOOD CARD
+// ═══════════════════════════════════════════
+function isMohEntry(food) {
+  return food.alts && food.alts.length === 0 && food.portion === '100 גרם';
+}
+
+let _mfMatches = [];
+
+function showMultifoodCard(matches) {
+  _mfMatches = matches.map((m, idx) => ({
+    id: idx, food: m.food, grams: 100, isMoh: isMohEntry(m.food)
+  }));
+  renderMfItems();
+  const card = document.getElementById('multifoodCard');
+  card.classList.add('show');
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function renderMfItems() {
+  document.getElementById('mfItems').innerHTML = _mfMatches.map(m => {
+    const cal = m.isMoh ? Math.round(m.food.cal * m.grams / 100) : m.food.cal;
+    return `
+    <div class="mf-item">
+      <div class="mf-item-name">${esc(m.food.name.split(',')[0])}</div>
+      ${m.isMoh
+        ? `<input type="number" class="mf-gram-input" value="${m.grams}" min="1" max="9999"
+             oninput="updateMfGrams(${m.id},this.value)">`
+        : `<span class="mf-gram-label">${esc(m.food.portion)}</span>`}
+      ${m.isMoh ? `<span class="mf-gram-label">גרם</span>` : ''}
+      <div class="mf-item-cal" id="mf-cal-${m.id}">${cal} קק"ל</div>
+      <button class="mf-remove" onclick="removeMfItem(${m.id})">✕</button>
+    </div>`;
+  }).join('');
+  updateMfTotal();
+}
+
+function updateMfGrams(id, val) {
+  const m = _mfMatches.find(x => x.id === id);
+  if (!m) return;
+  m.grams = Math.max(1, parseInt(val) || 1);
+  const el = document.getElementById('mf-cal-' + id);
+  if (el) el.textContent = Math.round(m.food.cal * m.grams / 100) + ' קק"ל';
+  updateMfTotal();
+}
+
+function removeMfItem(id) {
+  _mfMatches = _mfMatches.filter(m => m.id !== id);
+  if (_mfMatches.length === 0) { closeMultifood(); return; }
+  renderMfItems();
+}
+
+function updateMfTotal() {
+  const total = _mfMatches.reduce((s, m) =>
+    s + (m.isMoh ? Math.round(m.food.cal * m.grams / 100) : m.food.cal), 0);
+  document.getElementById('mfTotal').textContent = total;
+}
+
+function closeMultifood() {
+  document.getElementById('multifoodCard').classList.remove('show');
+  _mfMatches = [];
+}
+
+function confirmMultifood() {
+  if (_mfMatches.length === 0) return;
+  _mfMatches.forEach(m => {
+    const cal = m.isMoh ? Math.round(m.food.cal * m.grams / 100) : m.food.cal;
+    const displayName = m.isMoh
+      ? `${m.food.name.split(',')[0]} (${m.grams}ג׳)`
+      : m.food.name;
+    addEntryData({ name: displayName, cal, fromDB: m.isMoh ? null : m.food });
+  });
+  closeMultifood();
 }
 
 // ═══════════════════════════════════════════
