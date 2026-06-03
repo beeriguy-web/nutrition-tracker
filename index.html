@@ -5210,7 +5210,7 @@ function findAllFoods(text) {
       if (k.length < 3) continue;
       const i = text.indexOf(k);
       if (i === -1) continue;
-      const pre = i === 0 || /[\s,\-\/.(]/.test(text[i - 1]);
+      const pre = i === 0 || /[\s,\-\/.(וּבמלכשה]/.test(text[i - 1]);
       const post = i + k.length >= text.length || /[\s,\-\/.(]/.test(text[i + k.length]);
       if (!pre || !post) continue;
       let overlap = false;
