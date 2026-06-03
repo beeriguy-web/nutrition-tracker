@@ -5189,7 +5189,8 @@ function matchWord(text, kw) {
   if (kw.length < 3) return false;
   const i = text.indexOf(kw);
   if (i === -1) return false;
-  const pre = i === 0 || /[\s,\-\/.(]/.test(text[i - 1]);
+  // Allow Hebrew conjunctions (ו/ב/מ/ל/כ/ש/ה) glued to start of word
+  const pre = i === 0 || /[\s,\-\/.(וּבמלכשה]/.test(text[i - 1]);
   const post = i + kw.length >= text.length || /[\s,\-\/.(]/.test(text[i + kw.length]);
   return pre && post;
 }
@@ -5700,15 +5701,13 @@ function showMultifoodCard(matches) {
 
 function renderMfItems() {
   document.getElementById('mfItems').innerHTML = _mfMatches.map(m => {
-    const cal = m.isMoh ? Math.round(m.food.cal * m.grams / 100) : m.food.cal;
+    const cal = Math.round(m.food.cal * m.grams / 100);
     return `
     <div class="mf-item">
       <div class="mf-item-name">${esc(m.food.name.split(',')[0])}</div>
-      ${m.isMoh
-        ? `<input type="number" class="mf-gram-input" value="${m.grams}" min="1" max="9999"
-             oninput="updateMfGrams(${m.id},this.value)">`
-        : `<span class="mf-gram-label">${esc(m.food.portion)}</span>`}
-      ${m.isMoh ? `<span class="mf-gram-label">גרם</span>` : ''}
+      <input type="number" class="mf-gram-input" value="${m.grams}" min="1" max="9999"
+        oninput="updateMfGrams(${m.id},this.value)">
+      <span class="mf-gram-label">גרם</span>
       <div class="mf-item-cal" id="mf-cal-${m.id}">${cal} קק"ל</div>
       <button class="mf-remove" onclick="removeMfItem(${m.id})">✕</button>
     </div>`;
@@ -5733,7 +5732,7 @@ function removeMfItem(id) {
 
 function updateMfTotal() {
   const total = _mfMatches.reduce((s, m) =>
-    s + (m.isMoh ? Math.round(m.food.cal * m.grams / 100) : m.food.cal), 0);
+    s + Math.round(m.food.cal * m.grams / 100), 0);
   document.getElementById('mfTotal').textContent = total;
 }
 
@@ -5745,11 +5744,9 @@ function closeMultifood() {
 function confirmMultifood() {
   if (_mfMatches.length === 0) return;
   _mfMatches.forEach(m => {
-    const cal = m.isMoh ? Math.round(m.food.cal * m.grams / 100) : m.food.cal;
-    const displayName = m.isMoh
-      ? `${m.food.name.split(',')[0]} (${m.grams}ג׳)`
-      : m.food.name;
-    addEntryData({ name: displayName, cal, fromDB: m.isMoh ? null : m.food });
+    const cal = Math.round(m.food.cal * m.grams / 100);
+    const displayName = `${m.food.name.split(',')[0]} (${m.grams}ג׳)`;
+    addEntryData({ name: displayName, cal, fromDB: null });
   });
   closeMultifood();
 }
