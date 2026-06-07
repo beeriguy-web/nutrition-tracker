@@ -5195,7 +5195,24 @@ function matchWord(text, kw) {
   return pre && post;
 }
 
+function userFoodToEntry(f) {
+  const kws = [f.name];
+  const firstWord = f.name.split(/[\s,]/)[0];
+  if (firstWord && firstWord !== f.name && firstWord.length >= 3) kws.push(firstWord);
+  return { kw: kws, name: f.name, cal: f.cal, portion: 'מנה', alts: [], isUserFood: true };
+}
+
+function saveUserFood(name, cal) {
+  const idx = userFoods.findIndex(f => f.name === name.trim());
+  if (idx >= 0) { userFoods[idx].cal = cal; } else { userFoods.push({ name: name.trim(), cal }); }
+  localStorage.setItem('user_foods', JSON.stringify(userFoods));
+}
+
 function findFood(text) {
+  for (const f of userFoods) {
+    const e = userFoodToEntry(f);
+    if (e.kw.some(k => matchWord(text, k))) return e;
+  }
   for (const f of FOOD_DB) {
     if (f.kw.some(k => matchWord(text, k))) return f;
   }
@@ -5205,7 +5222,8 @@ function findFood(text) {
 function findAllFoods(text) {
   const used = new Array(text.length).fill(false);
   const results = [];
-  for (const f of FOOD_DB) {
+  const allDB = [...userFoods.map(userFoodToEntry), ...FOOD_DB];
+  for (const f of allDB) {
     for (const k of f.kw) {
       if (k.length < 3) continue;
       const i = text.indexOf(k);
@@ -5231,6 +5249,7 @@ const MEAL_LABELS = {breakfast:'בוקר',lunch:'צהריים',dinner:'ערב',s
 // STATE & STORAGE
 // ═══════════════════════════════════════════
 let entries = JSON.parse(localStorage.getItem('nutrition_entries') || '[]');
+let userFoods = JSON.parse(localStorage.getItem('user_foods') || '[]');
 let currentFilter = 'today';
 let selectedMeal = 'breakfast';
 let recog = null;
@@ -5378,6 +5397,7 @@ function addEntry() {
 
   if (matches.length === 0) {
     if (calInput === 0 && !confirm('קלוריות לא הוזנו — להמשיך עם 0?')) return;
+    if (calInput > 0) saveUserFood(name, calInput);
     addEntryData({ name, cal: calInput, fromDB: null });
     document.getElementById('inputFood').value = '';
     document.getElementById('inputCal').value = '';
