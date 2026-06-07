@@ -5209,21 +5209,27 @@ function saveUserFood(name, cal) {
 }
 
 function findFood(text) {
+  // User foods take absolute priority
   for (const f of userFoods) {
     const e = userFoodToEntry(f);
     if (e.kw.some(k => matchWord(text, k))) return e;
   }
+  // Main DB: prefer the entry with the LONGEST matching keyword
+  let best = null, bestLen = 0;
   for (const f of FOOD_DB) {
-    if (f.kw.some(k => matchWord(text, k))) return f;
+    for (const k of f.kw) {
+      if (k.length > bestLen && matchWord(text, k)) { best = f; bestLen = k.length; }
+    }
   }
-  return null;
+  return best;
 }
 
 function findAllFoods(text) {
-  const used = new Array(text.length).fill(false);
-  const results = [];
+  // Collect best (longest) keyword candidate per entry
+  const candidates = [];
   const allDB = [...userFoods.map(userFoodToEntry), ...FOOD_DB];
   for (const f of allDB) {
+    let bestK = null, bestI = -1;
     for (const k of f.kw) {
       if (k.length < 3) continue;
       const i = text.indexOf(k);
@@ -5231,13 +5237,21 @@ function findAllFoods(text) {
       const pre = i === 0 || /[\s,\-\/.(וּבמלכשה]/.test(text[i - 1]);
       const post = i + k.length >= text.length || /[\s,\-\/.(]/.test(text[i + k.length]);
       if (!pre || !post) continue;
-      let overlap = false;
-      for (let p = i; p < i + k.length; p++) { if (used[p]) { overlap = true; break; } }
-      if (overlap) continue;
-      for (let p = i; p < i + k.length; p++) used[p] = true;
-      results.push({ food: f, keyword: k, pos: i });
-      break;
+      if (!bestK || k.length > bestK.length) { bestK = k; bestI = i; }
     }
+    if (bestK) candidates.push({ food: f, keyword: bestK, pos: bestI, len: bestK.length });
+  }
+  // Sort by position, then longer keyword wins at same position
+  candidates.sort((a, b) => a.pos - b.pos || b.len - a.len);
+  // Greedy select non-overlapping matches
+  const used = new Array(text.length).fill(false);
+  const results = [];
+  for (const c of candidates) {
+    let overlap = false;
+    for (let p = c.pos; p < c.pos + c.len; p++) { if (used[p]) { overlap = true; break; } }
+    if (overlap) continue;
+    for (let p = c.pos; p < c.pos + c.len; p++) used[p] = true;
+    results.push(c);
   }
   return results.sort((a, b) => a.pos - b.pos);
 }
