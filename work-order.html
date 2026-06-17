@@ -98,6 +98,67 @@
         /* ── Approval ── */
         .approval-wrap { border-top: 2px solid #1a3a5c; margin-top: 26px; padding-top: 4px; }
 
+        /* ── Attachments ── */
+        .drop-zone {
+            border: 2px dashed #a0b4c8;
+            border-radius: 8px;
+            padding: 22px;
+            text-align: center;
+            color: #6a8aaa;
+            cursor: pointer;
+            transition: background .2s, border-color .2s;
+            background: #f8fafc;
+        }
+        .drop-zone:hover, .drop-zone.drag-over {
+            background: #e8f0f8;
+            border-color: #1a3a5c;
+            color: #1a3a5c;
+        }
+        .drop-zone .drop-icon { font-size: 2rem; line-height: 1; }
+        .drop-zone .drop-hint { font-size: 0.83rem; margin-top: 4px; }
+
+        .attach-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .attach-item {
+            position: relative;
+            border: 1px solid #d0dce8;
+            border-radius: 6px;
+            overflow: hidden;
+            background: #f4f7fb;
+        }
+        .attach-item.is-image { width: 110px; height: 90px; }
+        .attach-item.is-image img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .attach-item.is-file {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            max-width: 220px;
+        }
+        .attach-item .file-icon { font-size: 1.5rem; line-height: 1; flex-shrink: 0; }
+        .attach-item .file-name { font-size: 0.78rem; color: #444; word-break: break-all; }
+        .attach-item .remove-btn {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            background: rgba(180,0,0,.75);
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 0.75rem;
+            line-height: 20px;
+            text-align: center;
+            cursor: pointer;
+            padding: 0;
+        }
+        .attach-item .remove-btn:hover { background: #c00; }
+
         /* ── Footer note ── */
         .form-footer { font-size: 0.72rem; color: #aaa; margin-top: 18px; text-align: left; direction: ltr; }
 
@@ -257,9 +318,20 @@
         <!-- Description -->
         <div class="sec-label">תיאור העבודה</div>
         <textarea class="form-control" id="f-desc" rows="5" placeholder="פרט את העבודה הנדרשת, הנחיות מיוחדות, הערות..."></textarea>
-        <div class="text-muted mt-1" style="font-size:0.8rem;">
-            📎 קבצים נוספים (הזמנות, שרטוטים) — צרף ידנית למייל לאחר הורדת ה-PDF
+        <!-- Attachments -->
+        <div class="sec-label">קבצים מצורפים</div>
+        <div class="drop-zone" id="drop-zone"
+             onclick="document.getElementById('file-input').click()"
+             ondragover="onDragOver(event)"
+             ondragleave="onDragLeave(event)"
+             ondrop="onDrop(event)">
+            <div class="drop-icon">📎</div>
+            <div>גרור קבצים לכאן או <strong>לחץ לבחירה</strong></div>
+            <div class="drop-hint">תמונות יוטמעו ב-PDF • קבצים אחרים יופיעו כרשימה לצירוף ידני</div>
         </div>
+        <input type="file" id="file-input" multiple style="display:none"
+               onchange="handleFiles(this.files)">
+        <div class="attach-grid" id="attach-grid"></div>
 
         <!-- Approval -->
         <div class="approval-wrap">
@@ -300,6 +372,60 @@
 /* ── init ── */
 document.getElementById('f-date').valueAsDate = new Date();
 for (let i = 0; i < 6; i++) addRow();
+
+/* ── Attachments ── */
+const attachments = [];
+
+function fileIcon(type) {
+    if (type.includes('pdf'))   return '📄';
+    if (type.includes('word') || type.includes('document')) return '📝';
+    if (type.includes('excel') || type.includes('sheet') || type.includes('csv')) return '📊';
+    if (type.includes('dwg') || type.includes('dxf') || type.includes('cad')) return '📐';
+    if (type.includes('zip') || type.includes('rar') || type.includes('7z')) return '🗜';
+    return '📎';
+}
+
+function handleFiles(fileList) {
+    for (const file of fileList) {
+        const isImage = file.type.startsWith('image/');
+        const reader = new FileReader();
+        reader.onload = e => {
+            attachments.push({ name: file.name, type: file.type, dataUrl: e.target.result, isImage });
+            renderAttachments();
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function removeAttachment(idx) {
+    attachments.splice(idx, 1);
+    renderAttachments();
+}
+
+function renderAttachments() {
+    const grid = document.getElementById('attach-grid');
+    grid.innerHTML = attachments.map((a, i) => {
+        if (a.isImage) {
+            return `<div class="attach-item is-image">
+                      <img src="${a.dataUrl}" alt="${a.name}" title="${a.name}">
+                      <button class="remove-btn" onclick="removeAttachment(${i})">✕</button>
+                    </div>`;
+        }
+        return `<div class="attach-item is-file">
+                  <span class="file-icon">${fileIcon(a.type)}</span>
+                  <span class="file-name">${a.name}</span>
+                  <button class="remove-btn" style="position:static;width:18px;height:18px;font-size:.7rem;flex-shrink:0;" onclick="removeAttachment(${i})">✕</button>
+                </div>`;
+    }).join('');
+}
+
+function onDragOver(e)  { e.preventDefault(); document.getElementById('drop-zone').classList.add('drag-over'); }
+function onDragLeave(e) { document.getElementById('drop-zone').classList.remove('drag-over'); }
+function onDrop(e) {
+    e.preventDefault();
+    document.getElementById('drop-zone').classList.remove('drag-over');
+    handleFiles(e.dataTransfer.files);
+}
 
 /* ── row management ── */
 function addRow() {
@@ -357,6 +483,8 @@ function newForm() {
     document.getElementById('f-from').value = 'גיא בארי - מנהל מכירות ופרויקטים';
     document.getElementById('items-body').innerHTML = '';
     for (let i = 0; i < 6; i++) addRow();
+    attachments.length = 0;
+    renderAttachments();
 }
 
 /* ── PDF ── */
@@ -450,6 +578,27 @@ function buildPdfHTML() {
         </table>
       </div>
 
+      <!-- Attachments: images embedded, files listed -->
+      ${(() => {
+          const imgs  = attachments.filter(a => a.isImage);
+          const files = attachments.filter(a => !a.isImage);
+          let out = '';
+          if (imgs.length) {
+              out += `<div style="background:#e6edf5;border-right:4px solid #1a3a5c;padding:4px 10px;font-weight:700;margin:10px 0 6px;color:#1a3a5c;">תמונות מצורפות</div>
+                      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
+                        ${imgs.map(a => `<img src="${a.dataUrl}" alt="${a.name}"
+                            style="max-width:340px;max-height:240px;border:1px solid #ccc;border-radius:4px;">`).join('')}
+                      </div>`;
+          }
+          if (files.length) {
+              out += `<div style="background:#fff8e1;border-right:4px solid #f5a623;padding:6px 10px;font-size:0.85em;margin-bottom:8px;color:#7a5500;">
+                        ⚠ קבצים אלה יש לצרף ידנית למייל:<br>
+                        ${files.map(f => `• ${f.name}`).join('<br>')}
+                      </div>`;
+          }
+          return out;
+      })()}
+
       <!-- Footer -->
       <div style="margin-top:18px;color:#999;font-size:0.75em;text-align:left;direction:ltr;">
         טופס מס': 27/06/2011 | גרסה דיגיטלית 2025
@@ -510,7 +659,7 @@ ${rowLines ? 'פירוט פריטים:\n' + rowLines + '\n━━━━━━━�
 ${v('f-desc')}
 ━━━━━━━━━━━━━━━━━━━
 
-⚠ יש לצרף את קובץ ה-PDF שהורד + קבצים רלוונטיים נוספים.
+⚠ יש לצרף את קובץ ה-PDF שהורד${attachments.filter(a=>!a.isImage).length ? '\n\nקבצים לצירוף ידני:\n' + attachments.filter(a=>!a.isImage).map(f=>'• '+f.name).join('\n') : ''}${attachments.filter(a=>a.isImage).length ? '\n\n(תמונות מוטמעות בתוך ה-PDF)' : ''}
 
 בברכה,
 ${v('f-from')}`;
