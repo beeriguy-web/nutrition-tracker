@@ -213,6 +213,7 @@
     <span class="toolbar-title">📋 טופס הזמנת עבודה פנימית</span>
     <div class="d-flex gap-2 flex-wrap">
         <button class="btn btn-outline-light" onclick="newForm()">טופס חדש</button>
+        <button class="btn btn-outline-light" onclick="copyLink()" id="btn-share" title="העתק קישור לטופס לשיתוף עם עובדים">🔗 שתף קישור</button>
         <button class="btn btn-warning text-dark fw-bold" onclick="downloadPDF()">⬇ PDF</button>
         <button class="btn btn-success fw-bold" onclick="sendEmail()">✉ שלח במייל</button>
     </div>
@@ -425,6 +426,19 @@ function onDrop(e) {
     e.preventDefault();
     document.getElementById('drop-zone').classList.remove('drag-over');
     handleFiles(e.dataTransfer.files);
+}
+
+/* ── Share link ── */
+function copyLink() {
+    const url = window.location.href.split('?')[0];
+    navigator.clipboard.writeText(url).then(() => {
+        const btn = document.getElementById('btn-share');
+        btn.textContent = '✓ הועתק!';
+        toast('הקישור הועתק — אפשר לשלוח לעובדים ✓');
+        setTimeout(() => { btn.innerHTML = '🔗 שתף קישור'; }, 2000);
+    }).catch(() => {
+        prompt('העתק את הקישור:', window.location.href.split('?')[0]);
+    });
 }
 
 /* ── row management ── */
