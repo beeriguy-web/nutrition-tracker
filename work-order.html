@@ -401,7 +401,7 @@
                 </div>
                 <div class="col-sm-6">
                     <label class="form-label">תפקיד:</label>
-                    <input class="form-control" id="f-appr-role" placeholder="תפקיד">
+                    <input class="form-control" id="f-appr-role" value="מנהל מח' מכירות ופרויקטים" readonly>
                 </div>
                 <div class="col-12">
                     <label class="form-label">חתימה:</label>
@@ -621,7 +621,7 @@ function collectRows() {
 function newForm() {
     if (!confirm('לאפס את הטופס ולהתחיל מחדש?')) return;
     ['f-client','f-site','f-contact','f-phone1','f-phone2','f-cemail',
-     'f-wnum','f-delivery','f-corder','f-desc','f-appr-role'].forEach(id => {
+     'f-wnum','f-delivery','f-corder','f-desc'].forEach(id => {
         document.getElementById(id).value = '';
     });
     document.getElementById('f-date').valueAsDate  = new Date();
