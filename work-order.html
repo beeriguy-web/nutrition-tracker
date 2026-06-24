@@ -762,9 +762,33 @@ function buildPdfHTML() {
 }
 
 function downloadPDF() {
-    window.print();
-    toast('בחלון ההדפסה — בחר "שמור כ-PDF" ✓');
-    return `הזמנת_עבודה_${(v('f-client')||'לקוח')}_${v('f-wnum')||''}.pdf`;
+    const content = buildPdfHTML();
+    const win = window.open('', '_blank');
+    win.document.write(`<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  * { font-family: 'Heebo', Arial, sans-serif !important; box-sizing: border-box; }
+  body { margin: 0; padding: 0; background: #fff; direction: rtl; }
+  @media print { @page { margin: 12mm 10mm; } }
+</style>
+</head>
+<body>
+${content}
+<script>
+  window.addEventListener('load', function() {
+    setTimeout(function() {
+      window.print();
+      window.onafterprint = function() { window.close(); };
+    }, 400);
+  });
+<\/script>
+</body>
+</html>`);
+    win.document.close();
+    toast('שמור כ-PDF בחלון שנפתח ✓');
 }
 
 /* ── Email ── */
