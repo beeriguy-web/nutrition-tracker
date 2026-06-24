@@ -336,7 +336,11 @@
         <div class="row g-3">
             <div class="col-sm-4">
                 <label class="form-label">מספר עבודה:</label>
-                <input class="form-control" id="f-wnum" placeholder="מספר">
+                <div class="input-group">
+                    <span class="input-group-text">PR</span>
+                    <input class="form-control" id="f-wnum" placeholder="25-41">
+                    <span class="input-group-text">/@</span>
+                </div>
             </div>
             <div class="col-sm-4">
                 <label class="form-label">מועד אספקה:</label>
@@ -590,6 +594,7 @@ function removeRow() {
 
 /* ── Helpers ── */
 function v(id) { return (document.getElementById(id)?.value || '').trim(); }
+function wnum() { const n = v('f-wnum'); return n ? `PR${n}/@` : ''; }
 
 function fmtDate(iso) {
     if (!iso) return '';
@@ -693,7 +698,7 @@ function buildPdfHTML() {
       <div style="${secStyle}">פרטי${S}עבודה</div>
       <table style="width:100%;margin-bottom:10px;border-collapse:collapse;">
         <tr>
-          <td style="width:33%;${tdStyle}">${lbl("מס' עבודה")}${v('f-wnum')}</td>
+          <td style="width:33%;${tdStyle}">${lbl("מס' עבודה")}${wnum()}</td>
           <td style="width:34%;${tdStyle}">${lbl('מועד אספקה')}${fmtDate(v('f-delivery'))}</td>
           <td style="width:33%;${tdStyle}">${lbl('הזמנת לקוח')}${sp(v('f-corder'))}</td>
         </tr>
@@ -807,7 +812,7 @@ function buildEmailBody() {
 אתר:          ${v('f-site')}
 איש קשר:     ${v('f-contact')}  ${v('f-phone1')}${v('f-phone2') ? ' / ' + v('f-phone2') : ''}
 ━━━━━━━━━━━━━━━━━━━
-מספר עבודה:  ${v('f-wnum')}
+מספר עבודה:  ${wnum()}
 מועד אספקה:  ${fmtDate(v('f-delivery'))}
 הזמנת לקוח:  ${v('f-corder')}
 ━━━━━━━━━━━━━━━━━━━
@@ -827,7 +832,7 @@ let _pendingEmailBody    = '';
 
 function sendEmail() {
     _pendingEmailSubject = encodeURIComponent(
-        `הזמנת עבודה – ${v('f-client')} – מס' ${v('f-wnum')} – ${fmtDate(v('f-date'))}`
+        `הזמנת עבודה – ${v('f-client')} – מס' ${wnum()} – ${fmtDate(v('f-date'))}`
     );
     _pendingEmailBody = encodeURIComponent(buildEmailBody());
 
