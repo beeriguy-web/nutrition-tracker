@@ -132,67 +132,6 @@
         .sig-clear-btn:hover { background: #c00; }
         .sig-hint { font-size: 0.75rem; color: #999; margin-top: 3px; }
 
-        /* ── Attachments ── */
-        .drop-zone {
-            border: 2px dashed #a0b4c8;
-            border-radius: 8px;
-            padding: 22px;
-            text-align: center;
-            color: #6a8aaa;
-            cursor: pointer;
-            transition: background .2s, border-color .2s;
-            background: #f8fafc;
-        }
-        .drop-zone:hover, .drop-zone.drag-over {
-            background: #e8f0f8;
-            border-color: #1a3a5c;
-            color: #1a3a5c;
-        }
-        .drop-zone .drop-icon { font-size: 2rem; line-height: 1; }
-        .drop-zone .drop-hint { font-size: 0.83rem; margin-top: 4px; }
-
-        .attach-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-top: 12px;
-        }
-        .attach-item {
-            position: relative;
-            border: 1px solid #d0dce8;
-            border-radius: 6px;
-            overflow: hidden;
-            background: #f4f7fb;
-        }
-        .attach-item.is-image { width: 110px; height: 90px; }
-        .attach-item.is-image img { width: 100%; height: 100%; object-fit: cover; display: block; }
-        .attach-item.is-file {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 12px;
-            max-width: 220px;
-        }
-        .attach-item .file-icon { font-size: 1.5rem; line-height: 1; flex-shrink: 0; }
-        .attach-item .file-name { font-size: 0.78rem; color: #444; word-break: break-all; }
-        .attach-item .remove-btn {
-            position: absolute;
-            top: 3px;
-            left: 3px;
-            background: rgba(180,0,0,.75);
-            color: #fff;
-            border: none;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            font-size: 0.75rem;
-            line-height: 20px;
-            text-align: center;
-            cursor: pointer;
-            padding: 0;
-        }
-        .attach-item .remove-btn:hover { background: #c00; }
-
         /* ── Footer note ── */
         .form-footer { font-size: 0.72rem; color: #aaa; margin-top: 18px; text-align: left; direction: ltr; }
 
@@ -227,15 +166,11 @@
             /* hide all interactive UI */
             .toolbar,
             .d-flex.gap-2.mt-2,
-            .drop-zone,
-            #file-input,
             .form-footer,
             .sig-clear-btn,
             .sig-hint,
             .toast-msg,
-            #email-modal,
-            #pdf-zone,
-            .remove-btn { display: none !important; }
+            #pdf-zone { display: none !important; }
 
             body { background: #fff !important; font-size: 11pt; margin: 0; }
 
@@ -376,21 +311,6 @@
         <div class="sec-label">תיאור העבודה</div>
         <textarea class="form-control" id="f-desc" rows="5" placeholder="פרט את העבודה הנדרשת, הנחיות מיוחדות, הערות..."></textarea>
 
-        <!-- Attachments -->
-        <div class="sec-label">קבצים מצורפים</div>
-        <div class="drop-zone" id="drop-zone"
-             onclick="document.getElementById('file-input').click()"
-             ondragover="onDragOver(event)"
-             ondragleave="onDragLeave(event)"
-             ondrop="onDrop(event)">
-            <div class="drop-icon">📎</div>
-            <div>גרור קבצים לכאן או <strong>לחץ לבחירה</strong></div>
-            <div class="drop-hint">תמונות יוטמעו ב-PDF • קבצים אחרים יופיעו כרשימה לצירוף ידני</div>
-        </div>
-        <input type="file" id="file-input" multiple style="display:none"
-               onchange="handleFiles(this.files)">
-        <div class="attach-grid" id="attach-grid"></div>
-
         <!-- Approval (removed date, auto-filled name, canvas signature) -->
         <div class="approval-wrap">
             <div class="sec-label">אישור</div>
@@ -424,42 +344,6 @@
 <!-- ════ PDF ZONE (off-screen, always in DOM) ════ -->
 <div id="pdf-zone"></div>
 
-<!-- ════ EMAIL MODAL ════ -->
-<div id="email-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;align-items:center;justify-content:center;">
-    <div style="background:#fff;border-radius:12px;padding:24px;max-width:480px;width:92%;direction:rtl;box-shadow:0 8px 30px rgba(0,0,0,.2);max-height:90vh;overflow-y:auto;">
-        <div style="font-size:1.1rem;font-weight:700;margin-bottom:14px;color:#1a3a5c;">✉ שליחת הזמנת עבודה</div>
-
-        <!-- Step 1: PDF -->
-        <div style="background:#f0f6ff;border-radius:8px;padding:12px 14px;margin-bottom:10px;">
-            <div style="font-weight:700;font-size:0.88rem;margin-bottom:8px;color:#1a3a5c;">שלב 1 — שמור את הטופס כ-PDF</div>
-            <button onclick="downloadPDF()"
-                    style="padding:7px 16px;border:none;border-radius:6px;background:#1a3a5c;color:#fff;font-size:0.85rem;cursor:pointer;font-weight:700;">
-                🖨 פתח חלון הדפסה ← שמור כ-PDF
-            </button>
-        </div>
-
-        <!-- Step 2: attachments (only if non-image files exist) -->
-        <div id="modal-attach-step" style="display:none;background:#f0f6ff;border-radius:8px;padding:12px 14px;margin-bottom:10px;">
-            <div style="font-weight:700;font-size:0.88rem;margin-bottom:8px;color:#1a3a5c;">שלב 2 — הורד קבצים מצורפים</div>
-            <div id="modal-attach-list" style="font-size:0.85rem;line-height:2;"></div>
-        </div>
-
-        <!-- Step 3: open Outlook -->
-        <div style="background:#f0fff4;border-radius:8px;padding:12px 14px;margin-bottom:16px;">
-            <div style="font-weight:700;font-size:0.88rem;margin-bottom:4px;color:#155724;">שלב 3 — פתח Outlook וצרף ידנית</div>
-            <div style="font-size:0.82rem;color:#444;margin-bottom:8px;">לאחר פתיחת Outlook, צרף את ה-PDF (וקבצים נוספים) לפני השליחה</div>
-            <button onclick="doOpenOutlook()"
-                    style="padding:7px 18px;border:none;border-radius:6px;background:#198754;color:#fff;font-weight:700;font-size:0.85rem;cursor:pointer;">
-                פתח Outlook ✉
-            </button>
-        </div>
-
-        <div style="text-align:left;">
-            <button onclick="document.getElementById('email-modal').style.display='none'"
-                    style="padding:6px 16px;border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer;font-size:0.83rem;">סגור</button>
-        </div>
-    </div>
-</div>
 
 <!-- ════ SCRIPTS ════ -->
 <script>
@@ -524,60 +408,6 @@ function getSignatureDataUrl() {
     blank.height = canvas.height;
     if (canvas.toDataURL() === blank.toDataURL()) return null;
     return canvas.toDataURL('image/png');
-}
-
-/* ── Attachments ── */
-const attachments = [];
-
-function fileIcon(type) {
-    if (type.includes('pdf'))   return '📄';
-    if (type.includes('word') || type.includes('document')) return '📝';
-    if (type.includes('excel') || type.includes('sheet') || type.includes('csv')) return '📊';
-    if (type.includes('dwg') || type.includes('dxf') || type.includes('cad')) return '📐';
-    if (type.includes('zip') || type.includes('rar') || type.includes('7z')) return '🗜';
-    return '📎';
-}
-
-function handleFiles(fileList) {
-    for (const file of fileList) {
-        const isImage = file.type.startsWith('image/');
-        const reader  = new FileReader();
-        reader.onload = e => {
-            attachments.push({ name: file.name, type: file.type, dataUrl: e.target.result, isImage });
-            renderAttachments();
-        };
-        reader.readAsDataURL(file);
-    }
-}
-
-function removeAttachment(idx) {
-    attachments.splice(idx, 1);
-    renderAttachments();
-}
-
-function renderAttachments() {
-    const grid = document.getElementById('attach-grid');
-    grid.innerHTML = attachments.map((a, i) => {
-        if (a.isImage) {
-            return `<div class="attach-item is-image">
-                      <img src="${a.dataUrl}" alt="${a.name}" title="${a.name}">
-                      <button class="remove-btn" onclick="removeAttachment(${i})">✕</button>
-                    </div>`;
-        }
-        return `<div class="attach-item is-file">
-                  <span class="file-icon">${fileIcon(a.type)}</span>
-                  <span class="file-name">${a.name}</span>
-                  <button class="remove-btn" style="position:static;width:18px;height:18px;font-size:.7rem;flex-shrink:0;" onclick="removeAttachment(${i})">✕</button>
-                </div>`;
-    }).join('');
-}
-
-function onDragOver(e)  { e.preventDefault(); document.getElementById('drop-zone').classList.add('drag-over'); }
-function onDragLeave(e) { document.getElementById('drop-zone').classList.remove('drag-over'); }
-function onDrop(e) {
-    e.preventDefault();
-    document.getElementById('drop-zone').classList.remove('drag-over');
-    handleFiles(e.dataTransfer.files);
 }
 
 /* ── Share link ── */
@@ -649,8 +479,6 @@ function newForm() {
     document.getElementById('f-appr-by').value     = 'גיא בארי';
     document.getElementById('items-body').innerHTML = '';
     for (let i = 0; i < 6; i++) addRow();
-    attachments.length = 0;
-    renderAttachments();
     clearSignature();
 }
 
@@ -757,27 +585,6 @@ function buildPdfHTML() {
         </table>
       </div>
 
-      <!-- Attachments: images embedded, files listed -->
-      ${(() => {
-          const imgs  = attachments.filter(a => a.isImage);
-          const files = attachments.filter(a => !a.isImage);
-          let out = '';
-          if (imgs.length) {
-              out += `<div style="${secStyle}">תמונות${S}מצורפות</div>
-                      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
-                        ${imgs.map(a => `<img src="${a.dataUrl}" alt="${a.name}"
-                            style="max-width:340px;max-height:240px;border:1px solid #ccc;border-radius:4px;">`).join('')}
-                      </div>`;
-          }
-          if (files.length) {
-              out += `<div style="background:#fff8e1;border-right:4px solid #f5a623;padding:6px 10px;font-size:0.85em;margin-bottom:8px;color:#7a5500;">
-                        קבצים אלה יש לצרף ידנית למייל:<br>
-                        ${files.map(f => `• ${f.name}`).join('<br>')}
-                      </div>`;
-          }
-          return out;
-      })()}
-
       <!-- Footer -->
       <div style="margin-top:18px;color:#999;font-size:0.75em;text-align:left;direction:ltr;">
         טופס מס': 27/06/2011 | גרסה דיגיטלית 2025
@@ -824,7 +631,7 @@ function buildEmailBody() {
 
     return `שלום גל,
 
-מצורפת הזמנת עבודה פנימית לביצוע. אנא ראה PDF מצורף לטופס המלא.
+מצורפת הזמנת עבודה פנימית לביצוע. אנא ראה PDF מצורף.
 
 ━━━━━━━━━━━━━━━━━━━
 לקוח:        ${v('f-client')}
@@ -840,44 +647,16 @@ ${rowLines ? 'פירוט פריטים:\n' + rowLines + '\n━━━━━━━�
 ${v('f-desc')}
 ━━━━━━━━━━━━━━━━━━━
 
-⚠ יש לצרף את קובץ ה-PDF שהורד${attachments.filter(a=>!a.isImage).length ? '\n\nקבצים לצירוף ידני:\n' + attachments.filter(a=>!a.isImage).map(f=>'• '+f.name).join('\n') : ''}${attachments.filter(a=>a.isImage).length ? '\n\n(תמונות מוטמעות בתוך ה-PDF)' : ''}
-
 בברכה,
 ${v('f-from')}`;
 }
 
-let _pendingEmailSubject = '';
-let _pendingEmailBody    = '';
-
 function sendEmail() {
-    _pendingEmailSubject = encodeURIComponent(
+    const subject = encodeURIComponent(
         `הזמנת עבודה – ${v('f-client')} – מס' ${wnum()} – ${fmtDate(v('f-date'))}`
     );
-    _pendingEmailBody = encodeURIComponent(buildEmailBody());
-
-    // Build download links for non-image attachments
-    const nonImgFiles = attachments.filter(a => !a.isImage);
-    const attachStep  = document.getElementById('modal-attach-step');
-    const attachList  = document.getElementById('modal-attach-list');
-
-    if (nonImgFiles.length) {
-        attachList.innerHTML = nonImgFiles.map(f =>
-            `<a href="${f.dataUrl}" download="${f.name}"
-                style="display:inline-block;margin-left:8px;padding:4px 12px;border:1px solid #1a3a5c;border-radius:5px;color:#1a3a5c;text-decoration:none;font-size:0.83rem;">
-                ⬇ ${f.name}
-             </a>`
-        ).join('');
-        attachStep.style.display = 'block';
-    } else {
-        attachStep.style.display = 'none';
-    }
-
-    document.getElementById('email-modal').style.display = 'flex';
-}
-
-function doOpenOutlook() {
-    document.getElementById('email-modal').style.display = 'none';
-    window.location.href = `mailto:guy@smdrtech.co.il?subject=${_pendingEmailSubject}&body=${_pendingEmailBody}`;
+    const body = encodeURIComponent(buildEmailBody());
+    window.location.href = `mailto:guy@smdrtech.co.il?subject=${subject}&body=${body}`;
 }
 </script>
 
