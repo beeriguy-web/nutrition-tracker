@@ -506,20 +506,25 @@ function selectClient(name) {
     renderContacts();
 }
 
+const _ctMatches = {};
+
 function onContactInput(input, idx) {
     const client = (document.getElementById('f-client').value || '').trim();
     const dbList = CONTACTS_DB[client] || [];
     const val = input.value;
     const box = document.getElementById('ct-ac-' + idx);
     const matches = dbList.filter(c => c.n.includes(val));
+    _ctMatches[idx] = matches;
     if (!val || !matches.length) { box.style.display = 'none'; return; }
-    box.innerHTML = matches.slice(0,30).map(c =>
-        `<div class="ac-item" onmousedown="selectContact(${idx},${JSON.stringify(c).replace(/</g,'&lt;')})">${c.n}${c.p ? ' — ' + c.p : ''}</div>`
+    box.innerHTML = matches.slice(0,30).map((c, mi) =>
+        `<div class="ac-item" onmousedown="selectContact(${idx},${mi})">${c.n}${c.p ? ' — ' + c.p : ''}</div>`
     ).join('');
     box.style.display = 'block';
 }
 
-function selectContact(idx, c) {
+function selectContact(idx, mi) {
+    const c = (_ctMatches[idx] || [])[mi];
+    if (!c) return;
     const row = document.querySelector('.contact-row[data-idx="' + idx + '"]');
     const ins = row.querySelectorAll('input');
     ins[0].value = c.n;
