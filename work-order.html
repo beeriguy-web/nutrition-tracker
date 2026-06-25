@@ -492,10 +492,14 @@ function onClientInput(val) {
     const box = document.getElementById('client-ac');
     const matches = Object.keys(CONTACTS_DB).filter(k => k.includes(val.trim()));
     if (!val.trim() || !matches.length) { box.style.display = 'none'; return; }
-    box.innerHTML = matches.map(m =>
-        `<div class="ac-item" onmousedown="selectClient('${m.replace(/'/g,"\\'")}')">` + m + '</div>'
-    ).join('');
+    box.innerHTML = matches.map(m => '<div class="ac-item">' + m + '</div>').join('');
     box.style.display = 'block';
+    box.onmousedown = function(e) {
+        const item = e.target.closest('.ac-item');
+        if (!item) return;
+        e.preventDefault();
+        selectClient(item.textContent);
+    };
 }
 
 function selectClient(name) {
@@ -517,9 +521,23 @@ function onContactInput(input, idx) {
     _ctMatches[idx] = matches;
     if (!val || !matches.length) { box.style.display = 'none'; return; }
     box.innerHTML = matches.slice(0,30).map((c, mi) =>
-        `<div class="ac-item" onmousedown="selectContact(${idx},${mi})">${c.n}${c.p ? ' — ' + c.p : ''}</div>`
+        '<div class="ac-item" data-mi="' + mi + '">' + c.n + (c.p ? ' — ' + c.p : '') + '</div>'
     ).join('');
     box.style.display = 'block';
+    box.onmousedown = function(e) {
+        const item = e.target.closest('.ac-item');
+        if (!item) return;
+        e.preventDefault();
+        const c = (_ctMatches[idx] || [])[parseInt(item.dataset.mi)];
+        if (!c) return;
+        const row = document.querySelector('.contact-row[data-idx="' + idx + '"]');
+        const ins = row.querySelectorAll('input');
+        ins[0].value = c.n;
+        ins[1].value = c.p;
+        ins[2].value = c.e;
+        box.style.display = 'none';
+        syncContactsFromDOM();
+    };
 }
 
 function selectContact(idx, mi) {
