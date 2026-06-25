@@ -439,32 +439,24 @@ const CONTACTS_DB = {"דניה סיבוס בעמ":[{"n":"אביאל - רננים
 let formContacts = [{ name:'', phone:'', email:'' }];
 
 function renderContacts() {
-    const client = (document.getElementById('f-client').value || '').trim();
-    const dbList = CONTACTS_DB[client] || [];
     const container = document.getElementById('contacts-list');
-    container.innerHTML = formContacts.map((c, i) => `
-        <div class="contact-row" data-idx="${i}">
-            <div class="row g-2 align-items-center">
-                <div class="col-md-4 ac-wrap">
-                    <input class="form-control form-control-sm" value="${c.name}"
-                           placeholder="שם איש קשר"
-                           oninput="onContactInput(this,${i})"
-                           autocomplete="off">
-                    <div class="ac-box" id="ct-ac-${i}"></div>
-                </div>
-                <div class="col-md-3">
-                    <input class="form-control form-control-sm" type="tel" value="${c.phone}" placeholder="טלפון">
-                </div>
-                <div class="col-md-4">
-                    <input class="form-control form-control-sm" type="email" value="${c.email}" placeholder="מייל">
-                </div>
-                <div class="col-auto">
-                    ${formContacts.length > 1
-                        ? `<button class="btn btn-sm btn-outline-danger" onclick="removeContact(${i})">✕</button>`
-                        : ''}
-                </div>
-            </div>
-        </div>`).join('');
+    container.innerHTML = formContacts.map((c, i) =>
+        '<div class="contact-row" data-idx="' + i + '">' +
+        '<div class="row g-2 align-items-center">' +
+        '<div class="col-md-4 ac-wrap">' +
+        '<input id="ct-name-' + i + '" class="form-control form-control-sm" value="' + c.name.replace(/"/g,'&quot;') + '" placeholder="שם איש קשר" oninput="onContactInput(this,' + i + ')" autocomplete="off">' +
+        '<div class="ac-box" id="ct-ac-' + i + '"></div>' +
+        '</div>' +
+        '<div class="col-md-3">' +
+        '<input id="ct-phone-' + i + '" class="form-control form-control-sm" type="tel" value="' + c.phone + '" placeholder="טלפון">' +
+        '</div>' +
+        '<div class="col-md-4">' +
+        '<input id="ct-email-' + i + '" class="form-control form-control-sm" type="email" value="' + c.email + '" placeholder="מייל">' +
+        '</div>' +
+        '<div class="col-auto">' +
+        (formContacts.length > 1 ? '<button class="btn btn-sm btn-outline-danger" onclick="removeContact(' + i + ')">✕</button>' : '') +
+        '</div></div></div>'
+    ).join('');
     document.getElementById('btn-add-contact').style.display =
         formContacts.length >= 5 ? 'none' : '';
 }
@@ -530,11 +522,9 @@ function onContactInput(input, idx) {
         e.preventDefault();
         const c = (_ctMatches[idx] || [])[parseInt(item.dataset.mi)];
         if (!c) return;
-        const row = document.querySelector('.contact-row[data-idx="' + idx + '"]');
-        const ins = row.querySelectorAll('input');
-        ins[0].value = c.n;
-        ins[1].value = c.p;
-        ins[2].value = c.e;
+        document.getElementById('ct-name-' + idx).value = c.n;
+        document.getElementById('ct-phone-' + idx).value = c.p || '';
+        document.getElementById('ct-email-' + idx).value = c.e || '';
         box.style.display = 'none';
         syncContactsFromDOM();
     };
@@ -543,11 +533,9 @@ function onContactInput(input, idx) {
 function selectContact(idx, mi) {
     const c = (_ctMatches[idx] || [])[mi];
     if (!c) return;
-    const row = document.querySelector('.contact-row[data-idx="' + idx + '"]');
-    const ins = row.querySelectorAll('input');
-    ins[0].value = c.n;
-    ins[1].value = c.p;
-    ins[2].value = c.e;
+    document.getElementById('ct-name-' + idx).value = c.n;
+    document.getElementById('ct-phone-' + idx).value = c.p || '';
+    document.getElementById('ct-email-' + idx).value = c.e || '';
     document.getElementById('ct-ac-' + idx).style.display = 'none';
     syncContactsFromDOM();
 }
