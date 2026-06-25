@@ -802,7 +802,7 @@ ${v('f-from')}`;
 
 function sendEmail() {
     const subject = encodeURIComponent(
-        `הזמנת עבודה – ${v('f-client')} – מס' ${wnum()} – ${fmtDate(v('f-date'))}`
+        `הזמנת עבודה – ${v('f-client')} – ${v('f-site') || 'ללא אתר'} – ${v('f-wnum') ? 'PR' + v('f-wnum') : ''}`
     );
     const body = encodeURIComponent(buildEmailBody());
     window.location.href = `mailto:guy@smdrtech.co.il?subject=${subject}&body=${body}`;
